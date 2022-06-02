@@ -53,7 +53,9 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-
+void SPI_TransmitReceive (uint8_t *tx_data, int tx_size, uint8_t * rx_data, int rx_size, SPI_TypeDef * SPIx);
+void SPI_Transmit (uint8_t *data, int size, SPI_TypeDef * SPIx);
+void SPI_Receive (uint8_t *data, int size, SPI_TypeDef * SPIx);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

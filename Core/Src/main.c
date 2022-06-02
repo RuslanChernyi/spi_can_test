@@ -23,7 +23,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "drv_canfdspi_register.h"
+#include "canfd_stm.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,14 +56,14 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-void SPI_Transmit (uint8_t *data, int size);
-void SPI_Receive (uint8_t *data, int size);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 uint8_t spi1_rx_buf[20];
-
+REG_CiCON rx_buf;
+uint8_t my_buffer[6] = {0};
 /* USER CODE END 0 */
 
 /**
@@ -96,47 +97,81 @@ int main(void)
   MX_SPI1_Init();
   MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
-  SPI1->CR2 |= (1U<<6);	// Enable Rx buffer not empty interrupt
+  //SPI1->CR2 |= (1U<<6);	// Enable Rx buffer not empty interrupt
   SPI1->CR1 |= (1U<<6);	// Enable SPI1
+
+//	DMA configuration for SPI1_Rx
+
+  // Enable DMA2 clocking
+  RCC->AHB1ENR |= (1U<<22);
+  // Disable the stream
+  DMA2_Stream0->CR &= ~(1U<<0);	// Disable the stream0
+  while((DMA2_Stream0->CR & (1U<<0))) // Check that stream is disabled, if not disable again
+  {
+	  DMA2_Stream0->CR &= ~(1U<<0);	// Disable the stream0
+  }
+  // Clear dedicated stream status bits
+
+  // Set peripheral port register address in the DMA_SxPAR register.
+  DMA2_Stream0->PAR = (uint32_t)&(SPI1->DR);
+  // Set memory address in the DMA_SxMA0R register.
+  DMA2_Stream0->M0AR =(uint32_t)my_buffer;
+  // Configure number of items to be transferred in the DMA_SxNDTR register.
+  DMA2_Stream0->NDTR = 1;
+  //Select channel for a stream
+  DMA2_Stream0->CR |= 0x3<<25;	// Select channel 3 for stream 0 by writing to CHSEL[2:0]
+  // Set a peripheral controller in DMA_CR register
+  DMA2_Stream0->CR |= (1U<<5);	// Set a PFCTRL bit to enable peripheral flow controller
+  // Configure stream priority
+  DMA2_Stream0->CR |= (0x2U<<16); // Select high priority for this stream
+  // Select direction for a stream
+  DMA2_Stream0->CR &= ~(0x3<<6);	// Direction: Peripheral-to-memory. Select by writing into DIR[1:0]
+  // Enable memory increment
+  DMA2_Stream0->CR |= (1U<<10); // Set MINC
+  // Configure memory data size
+  DMA2_Stream0->CR &= ~(0x3<<13); // Set memory size to byte(8-bit)
+  // Enable SPI1 DMA controller
+  SPI1->CR2 |= (1U<<0);	// Rx Buffer DMA enable
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  static uint16_t address = 0xE00;
-	  static uint8_t myvbuf[2] = {0};
-	  static uint32_t my_size = 0;
-
-	  myvbuf[0] = (uint8_t) ((cINSTRUCTION_READ << 4) + ((address >> 8) & 0xF));
-	  myvbuf[1] = (uint8_t) (address & 0xFF);
-
-	  HAL_GPIO_WritePin(CAN3_CS_GPIO_Port, CAN3_CS_Pin, 0);
-	  SPI_Transmit(myvbuf, sizeof(myvbuf));
-	  HAL_GPIO_WritePin(CAN3_CS_GPIO_Port, CAN3_CS_Pin, 1);
-
-//	  spi1_rx_buf[0] = (uint8_t) ((cINSTRUCTION_WRITE << 4) + ((address >> 8) & 0xF));
-//	  spi1_rx_buf[1] = (uint8_t) (address & 0xFF);
-//	  for(int i = 2; i <= 19; i++)
-//	  {
-//		  spi1_rx_buf[i] = 0xF;
-//	  }
-//
-//	  HAL_GPIO_WritePin(CAN3_CS_GPIO_Port, CAN3_CS_Pin, 0);
-//	  SPI_Transmit(spi1_rx_buf, sizeof(spi1_rx_buf));
-//	  HAL_GPIO_WritePin(CAN3_CS_GPIO_Port, CAN3_CS_Pin, 1);
-
-
-//	  HAL_GPIO_WritePin(CAN3_CS_GPIO_Port, CAN3_CS_Pin, 0);
-//	  SPI_Receive(&spi1_rx_buf[my_size], 1);
-//	  HAL_GPIO_WritePin(CAN3_CS_GPIO_Port, CAN3_CS_Pin, 1);
-	  address++;
-	  my_size++;
-	  if(address > 0xE13)
+	  static uint32_t counter_rx = 0;
+	  static uint32_t h = 1;
+	  if(counter_rx == 10000)
 	  {
-		  address = 0xE00;
-		  my_size = 0;
+
+		  if(h == 1)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiCON, my_buffer);
+			  h = 2;
+		  }
+		  else if(h == 2)
+		  {
+			  spican_writeByte(cREGADDR_CiCON+3, 0x2);
+			  h = 3;
+		  }
+		  else if(h == 3)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiCON, my_buffer);
+			  h = 4;
+		  }
+		  else if(h == 4)
+		  {
+			  spican_writeByte(cREGADDR_CiCON+3, 0x4);
+			  h = 1;
+		  }
+
+		  counter_rx = 0;
 	  }
+	  else
+	  {
+		  counter_rx++;
+	  }
+
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -182,7 +217,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV4;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV4;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
   {
@@ -191,7 +226,42 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-void SPI_Transmit (uint8_t *data, int size)
+void SPI_TransmitReceive (uint8_t *tx_data, int tx_size, uint8_t * rx_data, int rx_size, SPI_TypeDef * SPIx)
+{
+	/************** STEPS TO FOLLOW *****************
+	1. Wait for the TXE bit to set in the Status Register
+	2. Write the data to the Data Register
+	3. After the data has been transmitted, wait for the BSY bit to reset in Status Register
+	4. Clear the Overrun flag by reading DR and SR
+	************************************************/
+
+	int i=0;
+	while (i<tx_size)
+	{
+	   while (!((SPIx->SR)&(1<<1))) {};  // wait for TXE bit to set -> This will indicate that the buffer is empty
+	   SPIx->DR = tx_data[i];  // load the data into the Data Register
+	   i++;
+	}
+	/*During discontinuous communications, there is a 2 APB clock period delay between the
+	write operation to the SPI_DR register and BSY bit setting. As a consequence it is
+	mandatory to wait first until TXE is set and then until BSY is cleared after writing the last
+	data.
+	*/
+	while (!((SPIx->SR)&(1<<1))) {};  // wait for TXE bit to set -> This will indicate that the buffer is empty
+
+	while (rx_size)
+	{
+		while (((SPIx->SR) & (1<<7))) {};  // wait for BSY bit to Reset -> This will indicate that SPI is not busy in communication
+		SPIx->DR = 0;  // send dummy data
+		while (!((SPIx->SR) & (1<<0))){};  // Wait for RXNE to set -> This will indicate that the Rx buffer is not empty
+		*rx_data++ = (SPIx->DR);
+		rx_size--;
+	}
+	//  Clear the Overrun flag by reading DR and SR
+	uint32_t temp = SPIx->SR;
+
+}
+void SPI_Transmit (uint8_t *data, int size, SPI_TypeDef * SPIx)
 {
 
 	/************** STEPS TO FOLLOW *****************
@@ -204,8 +274,8 @@ void SPI_Transmit (uint8_t *data, int size)
 	int i=0;
 	while (i<size)
 	{
-	   while (!((SPI1->SR)&(1<<1))) {};  // wait for TXE bit to set -> This will indicate that the buffer is empty
-	   SPI1->DR = data[i];  // load the data into the Data Register
+	   while (!((SPIx->SR)&(1<<1))) {};  // wait for TXE bit to set -> This will indicate that the buffer is empty
+	   SPIx->DR = data[i];  // load the data into the Data Register
 	   i++;
 	}
 
@@ -215,17 +285,16 @@ write operation to the SPI_DR register and BSY bit setting. As a consequence it 
 mandatory to wait first until TXE is set and then until BSY is cleared after writing the last
 data.
 */
-	while (!((SPI1->SR)&(1<<1))) {};  // wait for TXE bit to set -> This will indicate that the buffer is empty
-	while (((SPI1->SR)&(1<<7))) {};  // wait for BSY bit to Reset -> This will indicate that SPI is not busy in communication
+	while (!((SPIx->SR)&(1<<1))) {};  // wait for TXE bit to set -> This will indicate that the buffer is empty
+	while (((SPIx->SR)&(1<<7))) {};  // wait for BSY bit to Reset -> This will indicate that SPI is not busy in communication
 
 	//  Clear the Overrun flag by reading DR and SR
-	uint8_t temp = SPI1->DR;
-	temp = SPI1->SR;
-
+	uint8_t temp = SPIx->DR;
+	temp = SPIx->SR;
 
 }
 
-void SPI_Receive (uint8_t *data, int size)
+void SPI_Receive (uint8_t *data, int size, SPI_TypeDef * SPIx)
 {
 	/************** STEPS TO FOLLOW *****************
 	1. Wait for the BSY bit to reset in Status Register
@@ -236,12 +305,14 @@ void SPI_Receive (uint8_t *data, int size)
 
 	while (size)
 	{
-		while (((SPI1->SR)&(1<<7))) {};  // wait for BSY bit to Reset -> This will indicate that SPI is not busy in communication
-		SPI1->DR = 0;  // send dummy data
-		while (!((SPI1->SR) &(1<<0))){};  // Wait for RXNE to set -> This will indicate that the Rx buffer is not empty
-	  *data++ = (SPI1->DR);
+		while (((SPIx->SR) & (1<<7))) {};  // wait for BSY bit to Reset -> This will indicate that SPI is not busy in communication
+		SPIx->DR = 0;  // send dummy data
+		while (!((SPIx->SR) & (1<<0))){};  // Wait for RXNE to set -> This will indicate that the Rx buffer is not empty
+	  *data++ = (SPIx->DR);
 		size--;
 	}
+	//  Clear the Overrun flag by reading DR and SR
+	uint32_t temp = SPIx->SR;
 }
 /* USER CODE END 4 */
 
