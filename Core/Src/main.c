@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "spi.h"
+#include "tim.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -50,7 +51,8 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+uint32_t encoder_counter;
+uint32_t eg;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -64,6 +66,10 @@ void SystemClock_Config(void);
 uint8_t spi1_rx_buf[20];
 REG_CiCON rx_buf;
 uint8_t my_buffer[6] = {0};
+spiCAN spican1;
+spiCAN spican2;
+spiCAN spican3;
+spiCAN spican4;
 /* USER CODE END 0 */
 
 /**
@@ -96,12 +102,17 @@ int main(void)
   MX_GPIO_Init();
   MX_SPI1_Init();
   MX_SPI2_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
   //SPI1->CR2 |= (1U<<6);	// Enable Rx buffer not empty interrupt
   SPI1->CR1 |= (1U<<6);	// Enable SPI1
 
-//	DMA configuration for SPI1_Rx
+  spiCAN1_Init();
 
+  // Init Encoder
+  HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL);
+
+  // DMA configuration for SPI1_Rx
   // Enable DMA2 clocking
   RCC->AHB1ENR |= (1U<<22);
   // Disable the stream
@@ -140,27 +151,29 @@ int main(void)
   {
 	  static uint32_t counter_rx = 0;
 	  static uint32_t h = 1;
+	  encoder_counter = __HAL_TIM_GET_COUNTER(&htim4);//htim4.Instance->CNT;
+	  eg = 32767 - ((encoder_counter - 1) & 0xFFFF) / 2;
 	  if(counter_rx == 10000)
 	  {
 
 		  if(h == 1)
 		  {
-			  spican_read32bitReg_withDMA(cREGADDR_CiCON, my_buffer);
+			  spican_read32bitReg_withDMA(cREGADDR_CiCON, my_buffer, &spican1);
 			  h = 2;
 		  }
 		  else if(h == 2)
 		  {
-			  spican_writeByte(cREGADDR_CiCON+3, 0x2);
+			  spican_writeByte(cREGADDR_CiCON+3, 0x2, &spican1);
 			  h = 3;
 		  }
 		  else if(h == 3)
 		  {
-			  spican_read32bitReg_withDMA(cREGADDR_CiCON, my_buffer);
+			  spican_read32bitReg_withDMA(cREGADDR_CiCON, my_buffer, &spican1);
 			  h = 4;
 		  }
 		  else if(h == 4)
 		  {
-			  spican_writeByte(cREGADDR_CiCON+3, 0x4);
+			  spican_writeByte(cREGADDR_CiCON+3, 0x4, &spican1);
 			  h = 1;
 		  }
 
