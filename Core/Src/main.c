@@ -26,6 +26,7 @@
 /* USER CODE BEGIN Includes */
 #include "drv_canfdspi_register.h"
 #include "canfd_stm.h"
+#include "canfd_stm_config.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -147,6 +148,7 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  canfd_configure(&spican1);
   while (1)
   {
 	  static uint32_t counter_rx = 0;
@@ -159,24 +161,37 @@ int main(void)
 		  if(h == 1)
 		  {
 			  spican_read32bitReg_withDMA(cREGADDR_CiCON, my_buffer, &spican1);
+			  HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 			  h = 2;
 		  }
 		  else if(h == 2)
 		  {
-			  spican_writeByte(cREGADDR_CiCON+3, 0x2, &spican1);
+			  spican_read32bitReg_withDMA(cREGADDR_OSC, my_buffer, &spican1);
+			  HAL_GPIO_TogglePin(LD4_GPIO_Port, LD4_Pin);
 			  h = 3;
 		  }
 		  else if(h == 3)
 		  {
-			  spican_read32bitReg_withDMA(cREGADDR_CiCON, my_buffer, &spican1);
+			  spican_read32bitReg_withDMA(cREGADDR_IOCON, my_buffer, &spican1);
+			  HAL_GPIO_TogglePin(LD5_GPIO_Port, LD5_Pin);
 			  h = 4;
 		  }
 		  else if(h == 4)
 		  {
-			  spican_writeByte(cREGADDR_CiCON+3, 0x4, &spican1);
+			  spican_read32bitReg_withDMA(cREGADDR_CiNBTCFG, my_buffer, &spican1);
+			  HAL_GPIO_TogglePin(LD6_GPIO_Port, LD6_Pin);
+			  h = 5;
+		  }
+		  else if(h == 5)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiDBTCFG, my_buffer, &spican1);
+			  h = 6;
+		  }
+		  else if(h == 6)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiTDC, my_buffer, &spican1);
 			  h = 1;
 		  }
-
 		  counter_rx = 0;
 	  }
 	  else
