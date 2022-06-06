@@ -181,6 +181,7 @@ void spican_read32bitReg_withDMA(uint32_t address, uint8_t * reg_buffer, spiCAN 
 {
 
 	int8_t buffer[6] = {0};
+	uint8_t rx_buffer[6] = {0};
 	uint16_t writeCommand = (address & 0x0FFF) | (cINSTRUCTION_READ << 12);
 	buffer[0] = writeCommand >> 8;
 	buffer[1] = writeCommand & 0xFF;
@@ -196,13 +197,18 @@ void spican_read32bitReg_withDMA(uint32_t address, uint8_t * reg_buffer, spiCAN 
 	// Set amount of data to read by DMA
 	DMA2_Stream0->NDTR = 6;
 	// Select memory destination
-	DMA2_Stream0->M0AR = (uint32_t)reg_buffer;
+	DMA2_Stream0->M0AR = (uint32_t)rx_buffer;
 	// Start DMA
 	DMA2_Stream0->CR |= (1U<<0);
 
 	HAL_GPIO_WritePin(spican->CS_Port, spican->CS_Pin, 0);
 	SPI_Transmit(buffer, 6, spican->SPIx);
 	HAL_GPIO_WritePin(spican->CS_Port, spican->CS_Pin, 1);
+
+	reg_buffer[0] = rx_buffer[2];
+	reg_buffer[1] = rx_buffer[3];
+	reg_buffer[2] = rx_buffer[4];
+	reg_buffer[3] = rx_buffer[5];
 }
 
 void spican_read32bitReg(uint32_t address, uint8_t * reg_buffer, spiCAN * spican)

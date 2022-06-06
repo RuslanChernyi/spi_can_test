@@ -15,12 +15,80 @@
 void canfd_configure(spiCAN * spican)
 {
 	// Go to configuration mode
-	//spican_readByte_withDMA(cREGADDR_CiCON+3, 0x4, &spican1);
 	spican_writeByte(cREGADDR_CiCON+3, 0x4, spican);
+
 	canfd_configure_OSC(spican);
 	canfd_configure_IO_INT(spican);
 	canfd_configure_CiCON(spican);
 	canfd_configure_Timings(spican);
+	canfd_configure_Interrupts(spican);
+	canfd_configure_TransmitEventFIFO(spican);
+	canfd_configure_TransmitQueue(spican);
+	canfd_configure_asReceiveFIFO(0, spican);
+	canfd_configure_asTransmitFIFO(1, spican);
+
+	CAN_FILTEROBJ_ID filterID_1;
+	CAN_FILTEROBJ_ID filterID_2;
+	CAN_FILTEROBJ_ID filterID_3;
+	CAN_FILTEROBJ_ID filterID_4;
+
+	filterID_1.EXIDE = 0;
+	filterID_1.SID = 0xF0;
+	filterID_1.EID = 0;
+	filterID_1.SID11 = 0;
+
+	filterID_2.EXIDE = 0;
+	filterID_2.SID = 0xF1;
+	filterID_2.EID = 0;
+	filterID_2.SID11 = 0;
+
+	filterID_3.EXIDE = 0;
+	filterID_3.SID = 0xF2;
+	filterID_3.EID = 0;
+	filterID_3.SID11 = 0;
+
+	filterID_4.EXIDE = 0;
+	filterID_4.SID = 0x14;
+	filterID_4.EID = 0;
+	filterID_4.SID11 = 0;
+
+	canfd_configure_FilterObjectX(CAN_FILTER0, &filterID_1, spican);
+	canfd_configure_FilterObjectX(CAN_FILTER1, &filterID_2, spican);
+	canfd_configure_FilterObjectX(CAN_FILTER2, &filterID_3, spican);
+	canfd_configure_FilterObjectX(CAN_FILTER3, &filterID_4, spican);
+
+	CAN_MASKOBJ_ID filterMask_1;
+	CAN_MASKOBJ_ID filterMask_2;
+	CAN_MASKOBJ_ID filterMask_3;
+	CAN_MASKOBJ_ID filterMask_4;
+
+	filterMask_1.MIDE = 1;
+	filterMask_1.MSID11 = 1;
+	filterMask_1.MEID = 0;
+	filterMask_1.MSID = 0x7FF;
+
+	filterMask_2.MIDE = 1;
+	filterMask_2.MSID11 = 1;
+	filterMask_2.MEID = 0;
+	filterMask_2.MSID = 0x7FF;
+
+	filterMask_3.MIDE = 1;
+	filterMask_3.MSID11 = 1;
+	filterMask_3.MEID = 0;
+	filterMask_3.MSID = 0x7FF;
+
+	filterMask_4.MIDE = 1;
+	filterMask_4.MSID11 = 1;
+	filterMask_4.MEID = 0;
+	filterMask_4.MSID = 0x7FF;
+
+	canfd_configure_FilterMaskX(CAN_FILTER0, &filterMask_1, spican);
+	canfd_configure_FilterMaskX(CAN_FILTER1, &filterMask_2, spican);
+	canfd_configure_FilterMaskX(CAN_FILTER2, &filterMask_3, spican);
+	canfd_configure_FilterMaskX(CAN_FILTER3, &filterMask_4, spican);
+
+	canfd_configure_FilterConX(0, CAN_FIFO_CH1, CAN_FIFO_CH2, CAN_FIFO_CH3, CAN_FIFO_CH4, spican);
+	// Go to CAN2.0 mode
 	spican_writeByte(cREGADDR_CiCON+3, 0x6, spican);
 }
 
@@ -33,6 +101,7 @@ void canfd_configure_OSC(spiCAN * spican)
 
 	spican_write32bitReg(cREGADDR_OSC, osc.byte, spican);
 }
+
 void canfd_configure_IO_INT(spiCAN * spican)
 {
 	REG_IOCON iocon = {0};
@@ -112,9 +181,6 @@ void canfd_configure_Interrupts(spiCAN * spican)
 	spican_write32bitReg(cREGADDR_CiINT, ciint.byte, spican);
 }
 
-// TO DO: Check interrupts for different FIFOs. Make structure with different FIFOs.
-// TO DO: Clear interrupt flags for different FIFOs in FIFO register.
-
 void canfd_configure_TransmitEventFIFO(spiCAN * spican)
 {
 	REG_CiTEFCON citefcon = {0};
@@ -189,31 +255,83 @@ void canfd_configure_asTransmitFIFO(uint32_t FIFOx,spiCAN * spican)
 	spican_write32bitReg(cREGADDR_CiFIFOCON + (CiFIFO_OFFSET * FIFOx), fifocon.byte, spican);
 }
 
-void canfd_configure_Filter0_3_toFIFO(spiCAN * spican)
+void canfd_configure_FilterConX(uint32_t FilterConX, uint32_t FIFO_for_filter0, uint32_t FIFO_for_filter1, uint32_t FIFO_for_filter2, uint32_t FIFO_for_filter3, spiCAN * spican)
 {
-	uint8_t cifltcon0[4] = {0};
+	uint8_t cifltconX[4] = {0};
 
 	REG_CiFLTCON_BYTE filter0 = {0};
 	REG_CiFLTCON_BYTE filter1 = {0};
 	REG_CiFLTCON_BYTE filter2 = {0};
 	REG_CiFLTCON_BYTE filter3 = {0};
 
-	filter0.bF.BufferPointer = 0x1;
-	filter0.bF.Enable = 1;
+	if(FIFO_for_filter0 > 31)
+	{
+		filter0.bF.Enable = 0;
+	}
+	else
+	{
+		filter0.bF.BufferPointer = FIFO_for_filter0;
+		filter0.bF.Enable = 1;
+	}
 
-	filter1.bF.BufferPointer = 0x2;
-	filter1.bF.Enable = 1;
+	if(FIFO_for_filter1 > 31)
+	{
+		filter1.bF.Enable = 0;
+	}
+	else
+	{
+		filter1.bF.BufferPointer = FIFO_for_filter1;
+		filter1.bF.Enable = 1;
+	}
 
-	filter2.bF.BufferPointer = 0x3;
-	filter2.bF.Enable = 1;
+	if(FIFO_for_filter2 > 31)
+	{
+		filter2.bF.Enable = 0;
+	}
+	else
+	{
+		filter2.bF.BufferPointer = FIFO_for_filter2;
+		filter2.bF.Enable = 1;
+	}
 
-	filter3.bF.BufferPointer = 0x4;
-	filter3.bF.Enable = 1;
+	if(FIFO_for_filter0 > 31)
+	{
+		filter0.bF.Enable = 0;
+	}
+	else
+	{
+		filter3.bF.BufferPointer = FIFO_for_filter3;
+		filter0.bF.Enable = 1;
+	}
 
-	cifltcon0[0] = filter0.byte;
-	cifltcon0[1] = filter1.byte;
-	cifltcon0[2] = filter2.byte;
-	cifltcon0[3] = filter3.byte;
+	cifltconX[0] = filter0.byte;
+	cifltconX[1] = filter1.byte;
+	cifltconX[2] = filter2.byte;
+	cifltconX[3] = filter3.byte;
 
-	spican_write32bitReg(cREGADDR_CiFLTCON + (CiFILTER_OFFSET * 0), cifltcon0, spican);
+	spican_write32bitReg(cREGADDR_CiFLTCON + (CiFILTER_OFFSET * FilterConX), cifltconX, spican);
+}
+
+void canfd_configure_FilterObjectX(uint32_t FilterX, CAN_FILTEROBJ_ID * filterId, spiCAN * spican)
+{
+	REG_CiFLTOBJ cifltobj = {0};
+
+	cifltobj.bF.EID = filterId->EID;
+	cifltobj.bF.EXIDE = filterId->EXIDE;
+	cifltobj.bF.SID = filterId->SID;
+	cifltobj.bF.SID11 = filterId->SID11;
+
+	spican_write32bitReg(cREGADDR_CiFLTOBJ + (CiFILTER_OFFSET * FilterX), cifltobj.byte, spican);
+}
+
+void canfd_configure_FilterMaskX(uint32_t FilterX, CAN_MASKOBJ_ID * filterMask, spiCAN * spican)
+{
+	REG_CiMASK cimask = {0};
+
+	cimask.bF.MEID = filterMask->MEID;
+	cimask.bF.MIDE = filterMask->MIDE;
+	cimask.bF.MSID = filterMask->MSID;
+	cimask.bF.MSID11 = filterMask->MSID11;
+
+	spican_write32bitReg(cREGADDR_CiMASK + (CiFILTER_OFFSET * FilterX), cimask.byte, spican);
 }

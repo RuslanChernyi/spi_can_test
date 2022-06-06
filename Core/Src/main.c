@@ -71,6 +71,9 @@ spiCAN spican1;
 spiCAN spican2;
 spiCAN spican3;
 spiCAN spican4;
+
+
+mcp2517fd mcp_1 = {0};
 /* USER CODE END 0 */
 
 /**
@@ -103,7 +106,7 @@ int main(void)
   MX_GPIO_Init();
   MX_SPI1_Init();
   MX_SPI2_Init();
-  MX_TIM4_Init();
+//  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
   //SPI1->CR2 |= (1U<<6);	// Enable Rx buffer not empty interrupt
   SPI1->CR1 |= (1U<<6);	// Enable SPI1
@@ -111,7 +114,7 @@ int main(void)
   spiCAN1_Init();
 
   // Init Encoder
-  HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL);
+//  HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL);
 
   // DMA configuration for SPI1_Rx
   // Enable DMA2 clocking
@@ -146,6 +149,7 @@ int main(void)
   SPI1->CR2 |= (1U<<0);	// Rx Buffer DMA enable
   /* USER CODE END 2 */
 
+  uint32_t mcp_size = sizeof(mcp_1);
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   canfd_configure(&spican1);
@@ -153,43 +157,174 @@ int main(void)
   {
 	  static uint32_t counter_rx = 0;
 	  static uint32_t h = 1;
-	  encoder_counter = __HAL_TIM_GET_COUNTER(&htim4);//htim4.Instance->CNT;
-	  eg = 32767 - ((encoder_counter - 1) & 0xFFFF) / 2;
+//	  encoder_counter = __HAL_TIM_GET_COUNTER(&htim4);//htim4.Instance->CNT;
+//	  eg = 32767 - ((encoder_counter - 1) & 0xFFFF) / 2;
 	  if(counter_rx == 10000)
 	  {
 
 		  if(h == 1)
 		  {
-			  spican_read32bitReg_withDMA(cREGADDR_CiCON, my_buffer, &spican1);
+			  spican_read32bitReg_withDMA(cREGADDR_CiCON, mcp_1.CiCON.byte, &spican1);
 			  HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 			  h = 2;
 		  }
 		  else if(h == 2)
 		  {
-			  spican_read32bitReg_withDMA(cREGADDR_OSC, my_buffer, &spican1);
+			  spican_read32bitReg_withDMA(cREGADDR_OSC, mcp_1.OSC.byte, &spican1);
 			  HAL_GPIO_TogglePin(LD4_GPIO_Port, LD4_Pin);
 			  h = 3;
 		  }
 		  else if(h == 3)
 		  {
-			  spican_read32bitReg_withDMA(cREGADDR_IOCON, my_buffer, &spican1);
+			  spican_read32bitReg_withDMA(cREGADDR_IOCON, mcp_1.IOCON.byte, &spican1);
 			  HAL_GPIO_TogglePin(LD5_GPIO_Port, LD5_Pin);
 			  h = 4;
 		  }
 		  else if(h == 4)
 		  {
-			  spican_read32bitReg_withDMA(cREGADDR_CiNBTCFG, my_buffer, &spican1);
+			  spican_read32bitReg_withDMA(cREGADDR_CiNBTCFG, mcp_1.CiNBTCFG.byte, &spican1);
 			  HAL_GPIO_TogglePin(LD6_GPIO_Port, LD6_Pin);
 			  h = 5;
 		  }
 		  else if(h == 5)
 		  {
-			  spican_read32bitReg_withDMA(cREGADDR_CiDBTCFG, my_buffer, &spican1);
+			  spican_read32bitReg_withDMA(cREGADDR_CiDBTCFG, mcp_1.CiDBTCFG.byte, &spican1);
 			  h = 6;
 		  }
 		  else if(h == 6)
 		  {
-			  spican_read32bitReg_withDMA(cREGADDR_CiTDC, my_buffer, &spican1);
+			  spican_read32bitReg_withDMA(cREGADDR_CiTDC, mcp_1.CiTDC.byte, &spican1);
+			  h = 7;
+		  }
+		  else if(h == 7)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiTSCON, mcp_1.CiTSCON.byte, &spican1);
+			  h = 8;
+		  }
+		  else if(h == 8)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiINT, mcp_1.CiINT.byte, &spican1);
+			  h = 9;
+		  }
+		  else if(h == 9)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiBDIAG0, mcp_1.CiBDIAG0.byte, &spican1);
+			  h = 10;
+		  }
+		  else if(h == 10)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiBDIAG1, mcp_1.CiBDIAG1.byte, &spican1);
+			  h = 11;
+		  }
+		  else if(h == 11)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiTEFCON, mcp_1.CiTEFCON.byte, &spican1);
+			  h = 12;
+		  }
+		  else if(h == 12)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiFIFOCON + (CiFIFO_OFFSET * 0), mcp_1.CiFIFOCON1.byte, &spican1);
+			  h = 13;
+		  }
+		  else if(h == 13)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiFIFOCON + (CiFIFO_OFFSET * 1), mcp_1.CiFIFOCON2.byte, &spican1);
+			  h = 14;
+		  }
+		  else if(h == 14)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiFIFOCON + (CiFIFO_OFFSET * 2), mcp_1.CiFIFOCON3.byte, &spican1);
+			  h = 15;
+		  }
+		  else if(h == 15)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiFIFOCON + (CiFIFO_OFFSET * 3), mcp_1.CiFIFOCON4.byte, &spican1);
+			  h = 16;
+		  }
+		  else if(h == 16)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiTXQCON, mcp_1.CiTXQCON.byte, &spican1);
+			  h = 17;
+		  }
+
+		  else if(h == 17)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiFLTCON + 4 * 0, mcp_1.CiFLTCON0.byte, &spican1);
+			  h = 18;
+		  }
+		  else if(h == 18)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiTXQCON + 4 * 1, mcp_1.CiFLTCON1.byte, &spican1);
+			  h = 19;
+		  }
+		  else if(h == 19)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiTXQCON + 4 * 2, mcp_1.CiFLTCON2.byte, &spican1);
+			  h = 20;
+		  }
+		  else if(h == 20)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiTXQCON + 4 * 3, mcp_1.CiFLTCON3.byte, &spican1);
+			  h = 21;
+		  }
+		  else if(h == 21)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiTXQCON + 4 * 4, mcp_1.CiFLTCON4.byte, &spican1);
+			  h = 22;
+		  }
+		  else if(h == 22)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiTXQCON + 4 * 5, mcp_1.CiFLTCON5.byte, &spican1);
+			  h = 23;
+		  }
+		  else if(h == 23)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiTXQCON + 4 * 6, mcp_1.CiFLTCON6.byte, &spican1);
+			  h = 24;
+		  }
+		  else if(h == 24)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiTXQCON + 4 * 7, mcp_1.CiFLTCON7.byte, &spican1);
+			  h = 25;
+		  }
+		  else if(h == 25)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiFLTOBJ + (CiFILTER_OFFSET * 0), mcp_1.CiFLTOBJ0.byte, &spican1);
+			  h = 26;
+		  }
+		  else if(h == 26)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiFLTOBJ + (CiFILTER_OFFSET * 1), mcp_1.CiFLTOBJ1.byte, &spican1);
+			  h = 27;
+		  }
+		  else if(h == 27)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiFLTOBJ + (CiFILTER_OFFSET * 2), mcp_1.CiFLTOBJ2.byte, &spican1);
+			  h = 28;
+		  }
+		  else if(h == 28)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiFLTOBJ + (CiFILTER_OFFSET * 3), mcp_1.CiFLTOBJ3.byte, &spican1);
+			  h = 29;
+		  }
+		  else if(h == 29)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiMASK + (CiFILTER_OFFSET * 0), mcp_1.CiMASK0.byte, &spican1);
+			  h = 30;
+		  }
+		  else if(h == 30)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiMASK + (CiFILTER_OFFSET * 1), mcp_1.CiMASK1.byte, &spican1);
+			  h = 31;
+		  }
+		  else if(h == 31)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiMASK + (CiFILTER_OFFSET * 2), mcp_1.CiMASK2.byte, &spican1);
+			  h = 32;
+		  }
+		  else if(h == 32)
+		  {
+			  spican_read32bitReg_withDMA(cREGADDR_CiMASK + (CiFILTER_OFFSET * 3), mcp_1.CiMASK3.byte, &spican1);
 			  h = 1;
 		  }
 		  counter_rx = 0;
