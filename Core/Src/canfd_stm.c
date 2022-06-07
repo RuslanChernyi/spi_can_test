@@ -100,6 +100,48 @@ void spiCAN1_Init()
 //
 
 
+void canfd_transmit(spiCAN * spican)
+{
+
+	CAN_TX_MSGOBJ message = {0};
+	message.bF.id.EID = 0;
+	message.bF.id.SID = 0x1;
+	message.bF.id.SID11 = 0;
+
+	message.bF.ctrl.DLC = 0x8;
+	message.bF.ctrl.RTR = 0;
+	message.bF.ctrl.BRS = 0;	// If Bit rate switch is used, data bytes are transmited with DBR otherwise the whole message is transmited with NBR
+
+	uint8_t msg_pld[8] = {0};
+//	for(int i = 0; i < sizeof(message_payload); i++)
+//	{
+//		message_payload[i] = 0xEF;
+//	}
+	// message_ctrl.ESI and message_ctrl.FDF bits are used only in CAN-FD (Ignored in CAN2.0)
+
+	// Check if FIFO is not full
+	uint32_t FIFO_status = 0;
+	FIFO_status = spican_readByte_withDMA(cREGADDR_CiFIFOSTA + (CiFIFO_OFFSET * CAN_FIFO_CH1), spican);
+	while(!(FIFO_status & 0x1))	// Wait till TFNRFNIF in CiFIFOSTA1 is set (means Transmit FIFO is not full)
+	{
+		FIFO_status = spican_readByte_withDMA(cREGADDR_CiFIFOSTA + (CiFIFO_OFFSET * CAN_FIFO_CH1), spican);
+	}
+	// Check next transmit message address
+	union FIFO_address
+	{
+		uint32_t word;
+		uint8_t  byte[4];
+	};
+	union FIFO_address next_message_address = {0};
+
+	spican_read32bitReg_withDMA(cREGADDR_CiFIFOUA + (CiFIFO_OFFSET * CAN_FIFO_CH1), next_message_address.byte, spican);
+	// Send message
+	spican_write32bitReg(next_message_address.word + 0x400, message.byte, spican);
+	spican_write32bitReg(next_message_address.word + 0x404, &message.byte[4], spican);
+	spican_write32bitReg(next_message_address.word + 0x408, msg_pld, spican);
+	spican_write32bitReg(next_message_address.word + 0x412, &msg_pld[4], spican);
+}
+
 // Write
 void spican_writeByte(uint32_t address, uint8_t message, spiCAN * spican)
 {

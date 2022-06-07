@@ -190,7 +190,7 @@ void canfd_configure_TransmitEventFIFO(spiCAN * spican)
 	citefcon.bF.TEFHFIE = 0;
 	citefcon.bF.TEFOVIE = 0;
 	citefcon.bF.TimeStampEnable = 0;
-	citefcon.bF.UINC = 0;
+	citefcon.bF.UINC = 1;
 	citefcon.bF.FRESET = 1;
 	citefcon.bF.FifoSize = 0x3;
 
@@ -205,7 +205,7 @@ void canfd_configure_TransmitQueue(spiCAN * spican)
 	citxqcon.txBF.TxEmptyIE = 0;
 	citxqcon.txBF.TxAttemptIE = 0;
 	citxqcon.txBF.TxEnable = 1;
-	citxqcon.txBF.UINC = 0;
+	citxqcon.txBF.UINC = 1;
 	citxqcon.txBF.TxRequest = 0;
 	citxqcon.txBF.FRESET = 1;
 	citxqcon.txBF.TxPriority = 0;
@@ -225,7 +225,7 @@ void canfd_configure_asReceiveFIFO(uint32_t FIFOx, spiCAN * spican)
 	fifocon.rxBF.RxFullIE = 0;
 	fifocon.rxBF.RxOverFlowIE = 0;
 	fifocon.rxBF.RxTimeStampEnable = 0;
-	fifocon.rxBF.UINC = 0;
+	fifocon.rxBF.UINC = 1;
 	fifocon.rxBF.TxEnable = 0;
 	fifocon.rxBF.FRESET = 1;
 	fifocon.rxBF.FifoSize = 0x3;
@@ -246,7 +246,7 @@ void canfd_configure_asTransmitFIFO(uint32_t FIFOx,spiCAN * spican)
 	fifocon.txBF.TxRequest = 0;
 	fifocon.txBF.TxPriority = 0;
 	fifocon.txBF.TxAttempts = 0;
-	fifocon.txBF.UINC = 0;
+	fifocon.txBF.UINC = 1;
 	fifocon.txBF.TxEnable = 1;
 	fifocon.txBF.FRESET = 1;
 	fifocon.txBF.FifoSize = 0x3;

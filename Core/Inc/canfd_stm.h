@@ -8,6 +8,8 @@
 #ifndef INC_CANFD_STM_H_
 #define INC_CANFD_STM_H_
 
+#include "drv_canfdspi_register.h"
+
 typedef struct mcp2517fd_t
 {
 	REG_CiCON CiCON;
@@ -295,6 +297,10 @@ typedef struct spiCAN_t
 	uint32_t INT1_Pin;
 	GPIO_TypeDef * INT1_Port;
 }spiCAN;
+
+
+
+void canfd_transmit(spiCAN * spican);
 
 uint32_t Configure_CAN();
 // Write
