@@ -55,6 +55,7 @@
 /* USER CODE BEGIN PV */
 uint32_t encoder_counter;
 uint32_t eg;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -72,7 +73,7 @@ spiCAN spican2;
 spiCAN spican3;
 spiCAN spican4;
 canMsg msgID = {0};
-
+UsedFIFOs canfd1_fifos = {0};
 //mcp2517fd mcp_1 = {0};
 /* USER CODE END 0 */
 
@@ -134,6 +135,7 @@ int main(void)
 	  if(counter_rx == 100000)
 	  {
 		  canfd_transmit(&spican1);
+
 //		  if(h == 1)
 //		  {
 //			  spican_read32bitReg_withDMA(cREGADDR_CiCON, mcp_1.CiCON.byte, &spican1);

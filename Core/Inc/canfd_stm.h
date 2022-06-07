@@ -276,7 +276,11 @@ typedef struct mcp2517fd_t
 
 }mcp2517fd;
 
-
+typedef struct UsedFIFOs_t
+{
+	REG_CiFIFOCON FIFO1;
+	REG_CiFIFOCON FIFO2;
+}UsedFIFOs;
 
 typedef struct spiCAN_t
 {
@@ -310,18 +314,30 @@ typedef union canMsg_t
 }canMsg;
 
 void canfd_transmit(spiCAN * spican);
+uint32_t canfd_checkIfFIFOisNotFull(uint32_t FIFOx, spiCAN * spican);
+REG_CiTXREQ canfd_requestTransmission(uint32_t FIFOx, spiCAN * spican);
+void canfd_increment_FIFO(uint32_t FIFOx, REG_CiFIFOCON * fifocon, spiCAN * spican);
+REG_CiFIFOSTA canfd_getFIFOstatus(uint32_t FIFOx, spiCAN * spican);
+
 
 uint32_t Configure_CAN();
 // Write
 void spican_writeByte(uint32_t address, uint8_t message, spiCAN * spican);
+
 void spican_write8bitArray(uint32_t address, uint8_t * message, uint32_t size, spiCAN * spican);
+
 void spican_write32bitReg(uint32_t address, uint8_t * message, spiCAN * spican);
+
 // Read
 uint8_t spican_readByte(uint32_t address, spiCAN * spican);
 uint8_t spican_readByte_withDMA(uint32_t address, spiCAN * spican);
+
 void spican_read32bitReg(uint32_t address, uint8_t * reg_buffer, spiCAN * spican);
-void spican_readBytes(uint32_t address, uint8_t * rx_buffer, uint32_t size, spiCAN * spican);
 void spican_read32bitReg_withDMA(uint32_t address, uint8_t * reg_buffer, spiCAN * spican);
+
+void spican_readBytes(uint32_t address, uint8_t * rx_buffer, uint32_t size, spiCAN * spican);
+void spican_readBytes_withDMA(uint32_t address, uint8_t * rx_buffer, uint32_t size, spiCAN * spican);
+
 
 
 void spiCAN1_Init();

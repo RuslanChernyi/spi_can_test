@@ -12,6 +12,8 @@
 #include "drv_canfdspi_defines.h"
 #include "drv_canfdspi_register.h"
 
+extern UsedFIFOs canfd1_fifos;
+
 void canfd_configure(spiCAN * spican)
 {
 	// Go to configuration mode
@@ -24,8 +26,8 @@ void canfd_configure(spiCAN * spican)
 	canfd_configure_Interrupts(spican);
 	canfd_configure_TransmitEventFIFO(spican);
 	canfd_configure_TransmitQueue(spican);
-	canfd_configure_asReceiveFIFO(1, spican);
-	canfd_configure_asTransmitFIFO(2, spican);
+	canfd_configure_asReceiveFIFO(CAN_FIFO_CH1, &canfd1_fifos.FIFO1, spican);
+	canfd_configure_asTransmitFIFO(CAN_FIFO_CH2, &canfd1_fifos.FIFO2, spican);
 
 	CAN_FILTEROBJ_ID filterID_1;
 	CAN_FILTEROBJ_ID filterID_2;
@@ -127,8 +129,8 @@ void canfd_configure_CiCON(spiCAN * spican)
 	cicon.bF.RestrictReTxAttempts = 0;
 	cicon.bF.EsiInGatewayMode = 0;
 	cicon.bF.SystemErrorToListenOnly = 1;
-	cicon.bF.StoreInTEF = 1;
-	cicon.bF.TXQEnable = 1;
+	cicon.bF.StoreInTEF = 0;
+	cicon.bF.TXQEnable = 0;
 	cicon.bF.RequestOpMode = 0x4;
 	cicon.bF.AbortAllTx = 0;
 	cicon.bF.TxBandWidthSharing = 0;
@@ -216,43 +218,39 @@ void canfd_configure_TransmitQueue(spiCAN * spican)
 	spican_write32bitReg(cREGADDR_CiTXQCON, citxqcon.byte, spican);
 }
 
-void canfd_configure_asReceiveFIFO(uint32_t FIFOx, spiCAN * spican)
+void canfd_configure_asReceiveFIFO(uint32_t FIFOx, REG_CiFIFOCON * fifocon, spiCAN * spican)
 {
-	REG_CiFIFOCON fifocon = {0};
+	fifocon->rxBF.RxNotEmptyIE = 1;
+	fifocon->rxBF.RxHalfFullIE = 0;
+	fifocon->rxBF.RxFullIE = 0;
+	fifocon->rxBF.RxOverFlowIE = 0;
+	fifocon->rxBF.RxTimeStampEnable = 0;
+	fifocon->rxBF.UINC = 1;
+	fifocon->rxBF.TxEnable = 0;
+	fifocon->rxBF.FRESET = 0;
+	fifocon->rxBF.FifoSize = 0x3;
+	fifocon->rxBF.PayLoadSize = 0;
 
-	fifocon.rxBF.RxNotEmptyIE = 1;
-	fifocon.rxBF.RxHalfFullIE = 0;
-	fifocon.rxBF.RxFullIE = 0;
-	fifocon.rxBF.RxOverFlowIE = 0;
-	fifocon.rxBF.RxTimeStampEnable = 0;
-	fifocon.rxBF.UINC = 1;
-	fifocon.rxBF.TxEnable = 0;
-	fifocon.rxBF.FRESET = 1;
-	fifocon.rxBF.FifoSize = 0x3;
-	fifocon.rxBF.PayLoadSize = 0;
-
-	spican_write32bitReg(cREGADDR_CiFIFOCON + (CiFIFO_OFFSET * FIFOx), fifocon.byte, spican);
+	spican_write32bitReg(cREGADDR_CiFIFOCON + (CiFIFO_OFFSET * FIFOx), fifocon->byte, spican);
 }
 
-void canfd_configure_asTransmitFIFO(uint32_t FIFOx,spiCAN * spican)
+void canfd_configure_asTransmitFIFO(uint32_t FIFOx, REG_CiFIFOCON * fifocon, spiCAN * spican)
 {
-	REG_CiFIFOCON fifocon = {0};
+	fifocon->txBF.TxNotFullIE = 0;
+	fifocon->txBF.TxHalfFullIE = 0;
+	fifocon->txBF.TxEmptyIE = 0;
+	fifocon->txBF.TxAttemptIE = 0;
+	fifocon->txBF.RTREnable = 0;
+	fifocon->txBF.TxRequest = 0;
+	fifocon->txBF.TxPriority = 0;
+	fifocon->txBF.TxAttempts = 0;
+	fifocon->txBF.UINC = 0;
+	fifocon->txBF.TxEnable = 1;
+	fifocon->txBF.FRESET = 0;
+	fifocon->txBF.FifoSize = 0x3;
+	fifocon->txBF.PayLoadSize = 0;
 
-	fifocon.txBF.TxNotFullIE = 0;
-	fifocon.txBF.TxHalfFullIE = 0;
-	fifocon.txBF.TxEmptyIE = 0;
-	fifocon.txBF.TxAttemptIE = 0;
-	fifocon.txBF.RTREnable = 0;
-	fifocon.txBF.TxRequest = 0;
-	fifocon.txBF.TxPriority = 0;
-	fifocon.txBF.TxAttempts = 0;
-	fifocon.txBF.UINC = 0;
-	fifocon.txBF.TxEnable = 1;
-	fifocon.txBF.FRESET = 1;
-	fifocon.txBF.FifoSize = 0x3;
-	fifocon.txBF.PayLoadSize = 0;
-
-	spican_write32bitReg(cREGADDR_CiFIFOCON + (CiFIFO_OFFSET * FIFOx), fifocon.byte, spican);
+	spican_write32bitReg(cREGADDR_CiFIFOCON + (CiFIFO_OFFSET * FIFOx), fifocon->byte, spican);
 }
 
 void canfd_configure_FilterConX(uint32_t FilterConX, uint32_t FIFO_for_filter0, uint32_t FIFO_for_filter1, uint32_t FIFO_for_filter2, uint32_t FIFO_for_filter3, spiCAN * spican)
