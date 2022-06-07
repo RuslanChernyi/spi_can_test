@@ -18,6 +18,7 @@ extern spiCAN spican3;
 extern spiCAN spican4;
 
 extern UsedFIFOs canfd1_fifos;
+extern mcp_status canfd1_status;
 
 void spiCAN1_Init()
 {
@@ -99,6 +100,37 @@ void spiCAN1_Init()
 //	spican4.INT1_Port = CAN6_INT1_GPIO_Port;
 //}
 
+// Get status values from mcp
+void canfd_getStatus(mcp_status * candf_status, spiCAN * spican)
+{
+	spican_read32bitReg_withDMA(cREGADDR_CiCON, candf_status->Configuration.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiVEC, candf_status->Interrupt_vector.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiINT, candf_status->Interrupt_flags.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiTXIF, candf_status->Transmit_interrupt_status.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiTXATIF, candf_status->Transmit_attempt_interrupt.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiTXREQ, candf_status->Transmit_request.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiTREC, candf_status->Transmit_Receive_errorCount.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiBDIAG0, candf_status->BusDiagnostic_0.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiBDIAG1, candf_status->BusDiagnostic_1.byte, spican);
+
+	uint32_t FIFOctrl_address = cREGADDR_CiFIFOCON + (CiFIFO_OFFSET * CAN_FIFO_CH1);
+	spican_read32bitReg_withDMA(FIFOctrl_address, candf_status->FIFO1_Configuration.byte, spican);
+	FIFOctrl_address = cREGADDR_CiFIFOCON + (CiFIFO_OFFSET * CAN_FIFO_CH2);
+	spican_read32bitReg_withDMA(FIFOctrl_address, candf_status->FIFO2_Configuration.byte, spican);
+
+	uint32_t FIFOstatus_address = cREGADDR_CiFIFOSTA + (CiFIFO_OFFSET * CAN_FIFO_CH1);
+	spican_read32bitReg_withDMA(FIFOstatus_address, candf_status->FIFO1_Status.byte, spican);
+	FIFOstatus_address = cREGADDR_CiFIFOSTA + (CiFIFO_OFFSET * CAN_FIFO_CH2);
+	spican_read32bitReg_withDMA(FIFOstatus_address, candf_status->FIFO2_Status.byte, spican);
+
+	uint32_t FIFOUA_addres = cREGADDR_CiFIFOUA + (CiFIFO_OFFSET * CAN_FIFO_CH1);
+	spican_read32bitReg_withDMA(FIFOUA_addres, candf_status->FIFO1_NextAddress.byte, spican);
+	FIFOUA_addres = cREGADDR_CiFIFOUA + (CiFIFO_OFFSET * CAN_FIFO_CH1);
+	spican_read32bitReg_withDMA(FIFOUA_addres, candf_status->FIFO2_NextAddress.byte, spican);
+
+	spican_read32bitReg_withDMA(cREGADDR_OSC, candf_status->Oscillator_configuration_and_status.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_IOCON, candf_status->GPIO_Status.byte, spican);
+}
 
 // Check if FIFO is not full
 uint32_t canfd_checkIfFIFOisNotFull(uint32_t FIFOx, spiCAN * spican)
@@ -107,8 +139,9 @@ uint32_t canfd_checkIfFIFOisNotFull(uint32_t FIFOx, spiCAN * spican)
 	int32_t timeout = 10;
 	uint32_t FIFOstatus_address = cREGADDR_CiFIFOSTA + (CiFIFO_OFFSET * FIFOx);
 	spican_read32bitReg_withDMA(FIFOstatus_address, FIFO_status.byte, spican);
-	while(FIFO_status.txBF.TxNotFullIF != 1 || timeout <= 0)	// Wait till TFNRFNIF in CiFIFOSTA1 is set (means Transmit FIFO is not full)
+	while(FIFO_status.txBF.TxNotFullIF != 1 && timeout >= 0)	// Wait till TFNRFNIF in CiFIFOSTA1 is set (means Transmit FIFO is not full)
 	{
+		canfd_resetFIFO(FIFOx, &canfd1_fifos.FIFO2, spican);
 		spican_read32bitReg_withDMA(FIFOstatus_address, FIFO_status.byte, spican);
 		timeout--;
 	}
@@ -172,7 +205,30 @@ REG_CiFIFOSTA canfd_getFIFOstatus(uint32_t FIFOx, spiCAN * spican)
 	return FIFO_status;
 }
 
-void canfd_transmit(spiCAN * spican)
+// Reset FIFO
+void canfd_resetFIFO(uint32_t FIFOx, REG_CiFIFOCON * fifocon, spiCAN * spican)
+{
+	fifocon->txBF.TxNotFullIE = 0;
+	fifocon->txBF.TxHalfFullIE = 0;
+	fifocon->txBF.TxEmptyIE = 0;
+	fifocon->txBF.TxAttemptIE = 0;
+	fifocon->txBF.RTREnable = 0;
+	fifocon->txBF.TxRequest = 0;
+	fifocon->txBF.TxPriority = 0;
+	fifocon->txBF.TxAttempts = 0;
+	fifocon->txBF.UINC = 0;
+	fifocon->txBF.TxEnable = 1;
+	fifocon->txBF.FRESET = 1;
+	fifocon->txBF.FifoSize = 0x3;
+	fifocon->txBF.PayLoadSize = 0;
+
+	uint32_t FIFOctrl_address = cREGADDR_CiFIFOCON + (CiFIFO_OFFSET * FIFOx);
+	spican_write32bitReg(FIFOctrl_address, fifocon->byte, spican);
+	spican_read32bitReg_withDMA(FIFOctrl_address, fifocon->byte, spican);
+}
+
+// Can Transmit
+uint32_t canfd_transmit(spiCAN * spican)
 {
 	canMsg msgID = {0};
 
@@ -194,7 +250,10 @@ void canfd_transmit(spiCAN * spican)
 	////
 
 	// Check if FIFO is not full
-	canfd_checkIfFIFOisNotFull(CAN_FIFO_CH2, spican);
+	if(canfd_checkIfFIFOisNotFull(CAN_FIFO_CH2, spican) != HAL_OK)
+	{
+		return HAL_TIMEOUT;
+	}
 
 	// Check next transmit message address
 	uint32_t InRAMmsg_address = canfd_getNextFIFOmsgAddress(CAN_FIFO_CH2, spican);
@@ -217,8 +276,9 @@ void canfd_transmit(spiCAN * spican)
 	// Check FIFO's status register
 	REG_CiFIFOSTA FIFO_status = canfd_getFIFOstatus(CAN_FIFO_CH2, spican);
 	HAL_GPIO_TogglePin(LD4_GPIO_Port, LD4_Pin);
-	return;
+	return HAL_OK;
 }
+
 
 // Write
 void spican_writeByte(uint32_t address, uint8_t message, spiCAN * spican)

@@ -74,6 +74,7 @@ spiCAN spican3;
 spiCAN spican4;
 canMsg msgID = {0};
 UsedFIFOs canfd1_fifos = {0};
+mcp_status canfd1_status = {0};
 //mcp2517fd mcp_1 = {0};
 /* USER CODE END 0 */
 
@@ -125,7 +126,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 
   HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 0);
+  canfd_getStatus(&canfd1_status, &spican1);
   canfd_configure(&spican1);
+  canfd_getStatus(&canfd1_status, &spican1);
   while (1)
   {
 	  static uint32_t counter_rx = 0;
@@ -135,7 +138,7 @@ int main(void)
 	  if(counter_rx == 100000)
 	  {
 		  canfd_transmit(&spican1);
-
+		  canfd_getStatus(&canfd1_status, &spican1);
 //		  if(h == 1)
 //		  {
 //			  spican_read32bitReg_withDMA(cREGADDR_CiCON, mcp_1.CiCON.byte, &spican1);

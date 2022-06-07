@@ -221,25 +221,27 @@ void canfd_configure_TransmitQueue(spiCAN * spican)
 void canfd_configure_asReceiveFIFO(uint32_t FIFOx, REG_CiFIFOCON * fifocon, spiCAN * spican)
 {
 	fifocon->rxBF.RxNotEmptyIE = 1;
-	fifocon->rxBF.RxHalfFullIE = 0;
-	fifocon->rxBF.RxFullIE = 0;
-	fifocon->rxBF.RxOverFlowIE = 0;
+	fifocon->rxBF.RxHalfFullIE = 1;
+	fifocon->rxBF.RxFullIE = 1;
+	fifocon->rxBF.RxOverFlowIE = 1;
 	fifocon->rxBF.RxTimeStampEnable = 0;
-	fifocon->rxBF.UINC = 1;
+	fifocon->rxBF.UINC = 0;
 	fifocon->rxBF.TxEnable = 0;
 	fifocon->rxBF.FRESET = 0;
-	fifocon->rxBF.FifoSize = 0x3;
+	fifocon->rxBF.FifoSize = 0x1;
 	fifocon->rxBF.PayLoadSize = 0;
 
-	spican_write32bitReg(cREGADDR_CiFIFOCON + (CiFIFO_OFFSET * FIFOx), fifocon->byte, spican);
+	uint32_t FIFOctrl_address = cREGADDR_CiFIFOCON + (CiFIFO_OFFSET * FIFOx);
+	spican_write32bitReg(FIFOctrl_address, fifocon->byte, spican);
+	spican_read32bitReg_withDMA(FIFOctrl_address, fifocon->byte, spican);
 }
 
 void canfd_configure_asTransmitFIFO(uint32_t FIFOx, REG_CiFIFOCON * fifocon, spiCAN * spican)
 {
-	fifocon->txBF.TxNotFullIE = 0;
-	fifocon->txBF.TxHalfFullIE = 0;
-	fifocon->txBF.TxEmptyIE = 0;
-	fifocon->txBF.TxAttemptIE = 0;
+	fifocon->txBF.TxNotFullIE = 1;
+	fifocon->txBF.TxHalfFullIE = 1;
+	fifocon->txBF.TxEmptyIE = 1;
+	fifocon->txBF.TxAttemptIE = 1;
 	fifocon->txBF.RTREnable = 0;
 	fifocon->txBF.TxRequest = 0;
 	fifocon->txBF.TxPriority = 0;
@@ -247,10 +249,12 @@ void canfd_configure_asTransmitFIFO(uint32_t FIFOx, REG_CiFIFOCON * fifocon, spi
 	fifocon->txBF.UINC = 0;
 	fifocon->txBF.TxEnable = 1;
 	fifocon->txBF.FRESET = 0;
-	fifocon->txBF.FifoSize = 0x3;
+	fifocon->txBF.FifoSize = 0x1;
 	fifocon->txBF.PayLoadSize = 0;
 
-	spican_write32bitReg(cREGADDR_CiFIFOCON + (CiFIFO_OFFSET * FIFOx), fifocon->byte, spican);
+	uint32_t FIFOctrl_address = cREGADDR_CiFIFOCON + (CiFIFO_OFFSET * FIFOx);
+	spican_write32bitReg(FIFOctrl_address, fifocon->byte, spican);
+	spican_read32bitReg_withDMA(FIFOctrl_address, fifocon->byte, spican);
 }
 
 void canfd_configure_FilterConX(uint32_t FilterConX, uint32_t FIFO_for_filter0, uint32_t FIFO_for_filter1, uint32_t FIFO_for_filter2, uint32_t FIFO_for_filter3, spiCAN * spican)

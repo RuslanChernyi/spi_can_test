@@ -276,6 +276,28 @@ typedef struct mcp2517fd_t
 
 }mcp2517fd;
 
+typedef struct mcp_status_t
+{
+	REG_CiCON Configuration;
+	REG_CiVEC Interrupt_vector;
+	REG_CiINT Interrupt_flags;
+	REG_CiTXIF Transmit_interrupt_status;
+	REG_CiTXATIF Transmit_attempt_interrupt;
+	REG_CiTXREQ	Transmit_request;
+	REG_CiTREC Transmit_Receive_errorCount;
+	REG_CiBDIAG0 BusDiagnostic_0;
+	REG_CiBDIAG1 BusDiagnostic_1;
+	REG_CiFIFOCON FIFO1_Configuration;
+	REG_CiFIFOCON FIFO2_Configuration;
+	REG_CiFIFOSTA FIFO1_Status;
+	REG_CiFIFOSTA FIFO2_Status;
+	REG_CiFIFOUA FIFO1_NextAddress;
+	REG_CiFIFOUA FIFO2_NextAddress;
+
+	REG_OSC	Oscillator_configuration_and_status;
+	REG_IOCON GPIO_Status;
+}mcp_status;
+
 typedef struct UsedFIFOs_t
 {
 	REG_CiFIFOCON FIFO1;
@@ -313,12 +335,14 @@ typedef union canMsg_t
 	uint8_t byte[16];
 }canMsg;
 
-void canfd_transmit(spiCAN * spican);
+
+uint32_t canfd_transmit(spiCAN * spican);
 uint32_t canfd_checkIfFIFOisNotFull(uint32_t FIFOx, spiCAN * spican);
 REG_CiTXREQ canfd_requestTransmission(uint32_t FIFOx, spiCAN * spican);
 void canfd_increment_FIFO(uint32_t FIFOx, REG_CiFIFOCON * fifocon, spiCAN * spican);
 REG_CiFIFOSTA canfd_getFIFOstatus(uint32_t FIFOx, spiCAN * spican);
-
+void canfd_resetFIFO(uint32_t FIFOx, REG_CiFIFOCON * fifocon, spiCAN * spican);
+void canfd_getStatus(mcp_status * candf_status, spiCAN * spican);
 
 uint32_t Configure_CAN();
 // Write
