@@ -102,44 +102,63 @@ void spiCAN1_Init()
 
 void canfd_transmit(spiCAN * spican)
 {
+	canMsg msgID = {0};
 
-	CAN_TX_MSGOBJ message = {0};
-	message.bF.id.EID = 0;
-	message.bF.id.SID = 0x1;
-	message.bF.id.SID11 = 0;
+	msgID.id.EID = 0;
+	msgID.id.SID = 0x1;
+	msgID.id.SID11 = 0;
 
-	message.bF.ctrl.DLC = 0x8;
-	message.bF.ctrl.RTR = 0;
-	message.bF.ctrl.BRS = 0;	// If Bit rate switch is used, data bytes are transmited with DBR otherwise the whole message is transmited with NBR
+	msgID.ctrl.DLC = 0x8;
+	msgID.ctrl.RTR = 0;
+	msgID.ctrl.BRS = 0;	// If Bit rate switch is used, data bytes are transmited with DBR otherwise the whole message is transmited with NBR
 
-	uint8_t msg_pld[8] = {0};
-//	for(int i = 0; i < sizeof(message_payload); i++)
-//	{
-//		message_payload[i] = 0xEF;
-//	}
+
 	// message_ctrl.ESI and message_ctrl.FDF bits are used only in CAN-FD (Ignored in CAN2.0)
-
-	// Check if FIFO is not full
-	uint32_t FIFO_status = 0;
-	FIFO_status = spican_readByte_withDMA(cREGADDR_CiFIFOSTA + (CiFIFO_OFFSET * CAN_FIFO_CH1), spican);
-	while(!(FIFO_status & 0x1))	// Wait till TFNRFNIF in CiFIFOSTA1 is set (means Transmit FIFO is not full)
+	for(int i = 0; i < sizeof(msgID.message); i++)
 	{
-		FIFO_status = spican_readByte_withDMA(cREGADDR_CiFIFOSTA + (CiFIFO_OFFSET * CAN_FIFO_CH1), spican);
+		msgID.message[i] = 0xEF;
+	}
+	// Check if FIFO is not full
+	REG_CiFIFOSTA FIFO_status = {0};
+	uint32_t FIFOstatus_address = cREGADDR_CiFIFOSTA + (CiFIFO_OFFSET * CAN_FIFO_CH2);
+	spican_read32bitReg_withDMA(FIFOstatus_address, FIFO_status.byte, spican);
+	while(FIFO_status.txBF.TxNotFullIF != 1)	// Wait till TFNRFNIF in CiFIFOSTA1 is set (means Transmit FIFO is not full)
+	{
+		spican_read32bitReg_withDMA(FIFOstatus_address, FIFO_status.byte, spican);
 	}
 	// Check next transmit message address
-	union FIFO_address
-	{
-		uint32_t word;
-		uint8_t  byte[4];
-	};
-	union FIFO_address next_message_address = {0};
 
-	spican_read32bitReg_withDMA(cREGADDR_CiFIFOUA + (CiFIFO_OFFSET * CAN_FIFO_CH1), next_message_address.byte, spican);
+
+	REG_CiFIFOUA FIFO_UserAddress = {0};
+	uint32_t FIFOUA_addres = cREGADDR_CiFIFOUA + (CiFIFO_OFFSET * CAN_FIFO_CH2);
+	spican_read32bitReg_withDMA(FIFOUA_addres, FIFO_UserAddress.byte, spican);
+	uint32_t InRAMmsg_address = FIFO_UserAddress.bF.UserAddress + 0x400;
 	// Send message
-	spican_write32bitReg(next_message_address.word + 0x400, message.byte, spican);
-	spican_write32bitReg(next_message_address.word + 0x404, &message.byte[4], spican);
-	spican_write32bitReg(next_message_address.word + 0x408, msg_pld, spican);
-	spican_write32bitReg(next_message_address.word + 0x412, &msg_pld[4], spican);
+	spican_write8bitArray(InRAMmsg_address, msgID.byte, sizeof(msgID.byte), spican);
+	// Increment FIFO
+	REG_CiFIFOCON fifocon = {0};
+
+	fifocon.txBF.TxNotFullIE = 0;
+	fifocon.txBF.TxHalfFullIE = 0;
+	fifocon.txBF.TxEmptyIE = 0;
+	fifocon.txBF.TxAttemptIE = 0;
+	fifocon.txBF.RTREnable = 0;
+	fifocon.txBF.TxRequest = 0;
+	fifocon.txBF.TxPriority = 0;
+	fifocon.txBF.TxAttempts = 0;
+	fifocon.txBF.UINC = 0;
+	fifocon.txBF.TxEnable = 1;
+	fifocon.txBF.FRESET = 0;
+	fifocon.txBF.FifoSize = 0x3;
+	fifocon.txBF.PayLoadSize = 0;
+
+	spican_write32bitReg(cREGADDR_CiFIFOCON + (CiFIFO_OFFSET * CAN_FIFO_CH2), fifocon.byte, spican);
+
+	// Request sending the message
+	REG_CiTXREQ TXrequest_reg = {0};
+	TXrequest_reg.word |= 1U<<CAN_FIFO_CH2;
+	HAL_GPIO_TogglePin(LD4_GPIO_Port, LD4_Pin);
+	return;
 }
 
 // Write
@@ -154,6 +173,23 @@ void spican_writeByte(uint32_t address, uint8_t message, spiCAN * spican)
 	HAL_GPIO_WritePin(spican->CS_Port, spican->CS_Pin, 0);
 	SPI_Transmit(buffer, 3, spican->SPIx);
 	HAL_GPIO_WritePin(spican->CS_Port, spican->CS_Pin, 1);
+}
+
+void spican_write8bitArray(uint32_t address, uint8_t * message, uint32_t size, spiCAN * spican)
+{
+	uint8_t buffer[size + 2];
+	uint16_t writeCommand = (address & 0x0FFF) | (cINSTRUCTION_WRITE << 12);
+	buffer[0] = writeCommand >> 8;
+	buffer[1] = writeCommand & 0xFF;
+	for(int i = 0; i < size; i++)
+	{
+		buffer[i+2] = message[i];
+	}
+
+	HAL_GPIO_WritePin(spican->CS_Port, spican->CS_Pin, 0);
+	SPI_Transmit(buffer, sizeof(buffer), spican->SPIx);
+	HAL_GPIO_WritePin(spican->CS_Port, spican->CS_Pin, 1);
+	return;
 }
 
 void spican_write32bitReg(uint32_t address, uint8_t * message, spiCAN * spican)
@@ -251,6 +287,12 @@ void spican_read32bitReg_withDMA(uint32_t address, uint8_t * reg_buffer, spiCAN 
 	reg_buffer[1] = rx_buffer[3];
 	reg_buffer[2] = rx_buffer[4];
 	reg_buffer[3] = rx_buffer[5];
+	// Disable DMA
+	DMA2_Stream0->CR &= ~(1U<<0);	// Disable the stream0
+	while(DMA2_Stream0->CR & (1U<<0)) // Check that stream is disabled, if not disable again
+	{
+		DMA2_Stream0->CR &= ~(1U<<0);	// Disable the stream0
+	}
 }
 
 void spican_read32bitReg(uint32_t address, uint8_t * reg_buffer, spiCAN * spican)

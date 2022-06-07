@@ -27,6 +27,7 @@
 #include "drv_canfdspi_register.h"
 #include "canfd_stm.h"
 #include "canfd_stm_config.h"
+#include "DMA.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -65,13 +66,12 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 uint8_t spi1_rx_buf[20];
-REG_CiCON rx_buf;
 uint8_t my_buffer[6] = {0};
 spiCAN spican1;
 spiCAN spican2;
 spiCAN spican3;
 spiCAN spican4;
-
+canMsg msgID = {0};
 
 //mcp2517fd mcp_1 = {0};
 /* USER CODE END 0 */
@@ -112,46 +112,18 @@ int main(void)
   SPI1->CR1 |= (1U<<6);	// Enable SPI1
 
   spiCAN1_Init();
-
+  DMA_SPI1RXInit(my_buffer);
   // Init Encoder
 //  HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL);
 
-  // DMA configuration for SPI1_Rx
-  // Enable DMA2 clocking
-  RCC->AHB1ENR |= (1U<<22);
-  // Disable the stream
-  DMA2_Stream0->CR &= ~(1U<<0);	// Disable the stream0
-  while((DMA2_Stream0->CR & (1U<<0))) // Check that stream is disabled, if not disable again
-  {
-	  DMA2_Stream0->CR &= ~(1U<<0);	// Disable the stream0
-  }
-  // Clear dedicated stream status bits
 
-  // Set peripheral port register address in the DMA_SxPAR register.
-  DMA2_Stream0->PAR = (uint32_t)&(SPI1->DR);
-  // Set memory address in the DMA_SxMA0R register.
-  DMA2_Stream0->M0AR =(uint32_t)my_buffer;
-  // Configure number of items to be transferred in the DMA_SxNDTR register.
-  DMA2_Stream0->NDTR = 1;
-  //Select channel for a stream
-  DMA2_Stream0->CR |= 0x3<<25;	// Select channel 3 for stream 0 by writing to CHSEL[2:0]
-  // Set a peripheral controller in DMA_CR register
-  DMA2_Stream0->CR |= (1U<<5);	// Set a PFCTRL bit to enable peripheral flow controller
-  // Configure stream priority
-  DMA2_Stream0->CR |= (0x2U<<16); // Select high priority for this stream
-  // Select direction for a stream
-  DMA2_Stream0->CR &= ~(0x3<<6);	// Direction: Peripheral-to-memory. Select by writing into DIR[1:0]
-  // Enable memory increment
-  DMA2_Stream0->CR |= (1U<<10); // Set MINC
-  // Configure memory data size
-  DMA2_Stream0->CR &= ~(0x3<<13); // Set memory size to byte(8-bit)
-  // Enable SPI1 DMA controller
-  SPI1->CR2 |= (1U<<0);	// Rx Buffer DMA enable
   /* USER CODE END 2 */
 
 //  uint32_t mcp_size = sizeof(mcp_1);
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+  HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 0);
   canfd_configure(&spican1);
   while (1)
   {
@@ -159,10 +131,9 @@ int main(void)
 	  static uint32_t h = 1;
 //	  encoder_counter = __HAL_TIM_GET_COUNTER(&htim4);//htim4.Instance->CNT;
 //	  eg = 32767 - ((encoder_counter - 1) & 0xFFFF) / 2;
-	  if(counter_rx == 10000)
+	  if(counter_rx == 100000)
 	  {
 		  canfd_transmit(&spican1);
-
 //		  if(h == 1)
 //		  {
 //			  spican_read32bitReg_withDMA(cREGADDR_CiCON, mcp_1.CiCON.byte, &spican1);
@@ -546,6 +517,7 @@ data.
 	//  Clear the Overrun flag by reading DR and SR
 	uint8_t temp = SPIx->DR;
 	temp = SPIx->SR;
+	return;
 
 }
 

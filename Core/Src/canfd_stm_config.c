@@ -24,8 +24,8 @@ void canfd_configure(spiCAN * spican)
 	canfd_configure_Interrupts(spican);
 	canfd_configure_TransmitEventFIFO(spican);
 	canfd_configure_TransmitQueue(spican);
-	canfd_configure_asReceiveFIFO(0, spican);
-	canfd_configure_asTransmitFIFO(1, spican);
+	canfd_configure_asReceiveFIFO(1, spican);
+	canfd_configure_asTransmitFIFO(2, spican);
 
 	CAN_FILTEROBJ_ID filterID_1;
 	CAN_FILTEROBJ_ID filterID_2;
@@ -246,7 +246,7 @@ void canfd_configure_asTransmitFIFO(uint32_t FIFOx,spiCAN * spican)
 	fifocon.txBF.TxRequest = 0;
 	fifocon.txBF.TxPriority = 0;
 	fifocon.txBF.TxAttempts = 0;
-	fifocon.txBF.UINC = 1;
+	fifocon.txBF.UINC = 0;
 	fifocon.txBF.TxEnable = 1;
 	fifocon.txBF.FRESET = 1;
 	fifocon.txBF.FifoSize = 0x3;

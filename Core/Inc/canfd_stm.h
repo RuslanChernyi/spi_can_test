@@ -298,13 +298,23 @@ typedef struct spiCAN_t
 	GPIO_TypeDef * INT1_Port;
 }spiCAN;
 
-
+typedef union canMsg_t
+{
+	struct
+	{
+		CAN_MSGOBJ_ID id;
+		CAN_TX_MSGOBJ_CTRL ctrl;
+		uint8_t message[8];
+	};
+	uint8_t byte[16];
+}canMsg;
 
 void canfd_transmit(spiCAN * spican);
 
 uint32_t Configure_CAN();
 // Write
 void spican_writeByte(uint32_t address, uint8_t message, spiCAN * spican);
+void spican_write8bitArray(uint32_t address, uint8_t * message, uint32_t size, spiCAN * spican);
 void spican_write32bitReg(uint32_t address, uint8_t * message, spiCAN * spican);
 // Read
 uint8_t spican_readByte(uint32_t address, spiCAN * spican);
