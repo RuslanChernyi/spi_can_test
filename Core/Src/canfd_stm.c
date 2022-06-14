@@ -130,6 +130,7 @@ void canfd_getStatus(mcp_status * candf_status, spiCAN * spican)
 
 	spican_read32bitReg_withDMA(cREGADDR_OSC, candf_status->Oscillator_configuration_and_status.byte, spican);
 	spican_read32bitReg_withDMA(cREGADDR_IOCON, candf_status->GPIO_Status.byte, spican);
+	HAL_GPIO_TogglePin(LD6_GPIO_Port, LD6_Pin);
 }
 
 // Check if FIFO is not full
@@ -252,6 +253,7 @@ uint32_t canfd_transmit(spiCAN * spican)
 	// Check if FIFO is not full
 	if(canfd_checkIfFIFOisNotFull(CAN_FIFO_CH2, spican) != HAL_OK)
 	{
+		HAL_GPIO_WritePin(LD5_GPIO_Port, LD5_Pin, 1);
 		return HAL_TIMEOUT;
 	}
 

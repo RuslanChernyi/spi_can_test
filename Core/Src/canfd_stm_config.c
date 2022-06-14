@@ -90,7 +90,7 @@ void canfd_configure(spiCAN * spican)
 	canfd_configure_FilterMaskX(CAN_FILTER3, &filterMask_4, spican);
 
 	canfd_configure_FilterConX(0, CAN_FIFO_CH1, CAN_FIFO_CH2, CAN_FIFO_CH3, CAN_FIFO_CH4, spican);
-	// Go to CAN2.0 mode
+	// Go to Internal loopback mode
 	spican_writeByte(cREGADDR_CiCON+3, 0x6, spican);
 }
 
@@ -98,9 +98,8 @@ void canfd_configure_OSC(spiCAN * spican)
 {
 	REG_OSC osc = {0};
 	osc.bF.PllEnable = 0;
-	osc.bF.SCLKDIV = 0;
+	osc.bF.SCLKDIV = 1;
 	osc.bF.CLKODIV = 0x3;
-
 	spican_write32bitReg(cREGADDR_OSC, osc.byte, spican);
 }
 
@@ -112,7 +111,6 @@ void canfd_configure_IO_INT(spiCAN * spican)
 	iocon.bF.PinMode1 = 0;
 	iocon.bF.SOFOutputEnable = 0;
 	iocon.bF.INTPinOpenDrain = 0;
-
 
 	spican_write32bitReg(cREGADDR_IOCON, iocon.byte, spican);
 }
@@ -145,7 +143,7 @@ void canfd_configure_Timings(spiCAN * spican)
 	REG_CiTDC transmit_delay_compensation = {0};
 
 	nom_bit_time_con.bF.BRP = 0;
-	nom_bit_time_con.bF.TSEG1 = 254;
+	nom_bit_time_con.bF.TSEG1 = 126;//254;
 	nom_bit_time_con.bF.TSEG2 = 63;
 	nom_bit_time_con.bF.SJW = 63;
 
@@ -155,7 +153,7 @@ void canfd_configure_Timings(spiCAN * spican)
 	data_bit_time_con.bF.SJW = 7;
 
 	transmit_delay_compensation.bF.TDCOffset = 31;
-	transmit_delay_compensation.bF.TDCMode = 0x3;
+	transmit_delay_compensation.bF.TDCMode = 0x2;
 
 	spican_write32bitReg(cREGADDR_CiNBTCFG, nom_bit_time_con.byte, spican);
 	spican_write32bitReg(cREGADDR_CiDBTCFG, data_bit_time_con.byte, spican);
@@ -166,18 +164,18 @@ void canfd_configure_Interrupts(spiCAN * spican)
 {
 	REG_CiINT ciint = {0};
 
-	ciint.bF.IE.TXIE = 0;
+	ciint.bF.IE.TXIE = 1;
 	ciint.bF.IE.RXIE = 1;
-	ciint.bF.IE.TBCIE = 0;
+	ciint.bF.IE.TBCIE = 1;
 	ciint.bF.IE.MODIE = 1;
-	ciint.bF.IE.TEFIE = 0;
-	ciint.bF.IE.ECCIE = 0;
-	ciint.bF.IE.SPICRCIE = 0;
-	ciint.bF.IE.TXATIE = 0;
+	ciint.bF.IE.TEFIE = 1;
+	ciint.bF.IE.ECCIE = 1;
+	ciint.bF.IE.SPICRCIE = 1;
+	ciint.bF.IE.TXATIE = 1;
 	ciint.bF.IE.RXOVIE = 1;
 	ciint.bF.IE.SERRIE = 1;
 	ciint.bF.IE.CERRIE = 1;
-	ciint.bF.IE.WAKIE = 0;
+	ciint.bF.IE.WAKIE = 1;
 	ciint.bF.IE.IVMIE = 1;
 
 	spican_write32bitReg(cREGADDR_CiINT, ciint.byte, spican);
@@ -192,7 +190,7 @@ void canfd_configure_TransmitEventFIFO(spiCAN * spican)
 	citefcon.bF.TEFHFIE = 0;
 	citefcon.bF.TEFOVIE = 0;
 	citefcon.bF.TimeStampEnable = 0;
-	citefcon.bF.UINC = 1;
+	citefcon.bF.UINC = 0;
 	citefcon.bF.FRESET = 1;
 	citefcon.bF.FifoSize = 0x3;
 
