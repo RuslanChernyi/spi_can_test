@@ -75,6 +75,7 @@ spiCAN spican4;
 canMsg msgID = {0};
 UsedFIFOs canfd1_fifos = {0};
 mcp_status canfd1_status = {0};
+CAN_RX_MSGOBJ received_msg = {0};
 //mcp2517fd mcp_1 = {0};
 /* USER CODE END 0 */
 
@@ -108,7 +109,7 @@ int main(void)
   MX_GPIO_Init();
   MX_SPI1_Init();
   MX_SPI2_Init();
-//  MX_TIM4_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
   //SPI1->CR2 |= (1U<<6);	// Enable Rx buffer not empty interrupt
   SPI1->CR1 |= (1U<<6);	// Enable SPI1
@@ -121,7 +122,6 @@ int main(void)
 
   /* USER CODE END 2 */
 
-//  uint32_t mcp_size = sizeof(mcp_1);
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
@@ -133,11 +133,13 @@ int main(void)
   {
 	  static uint32_t counter_rx = 0;
 	  static uint32_t h = 1;
+	  static uint8_t rx_buf[300] = {0};
 //	  encoder_counter = __HAL_TIM_GET_COUNTER(&htim4);//htim4.Instance->CNT;
 //	  eg = 32767 - ((encoder_counter - 1) & 0xFFFF) / 2;
-	  if(counter_rx == 1000000)
+	  if(counter_rx == 100000)
 	  {
-		  canfd_transmit(&spican1);
+		  canfd_transmit(CAN_FIFO_CH1, &spican1);
+		  //received_msg = canfd_receive(CAN_FIFO_CH2, &spican1);
 		  canfd_getStatus(&canfd1_status, &spican1);
 		  counter_rx = 0;
 	  }
@@ -177,7 +179,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLM = 8;
-  RCC_OscInitStruct.PLL.PLLN = 64;
+  RCC_OscInitStruct.PLL.PLLN = 80;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 8;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -190,11 +192,11 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV4;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }

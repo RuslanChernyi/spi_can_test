@@ -69,27 +69,22 @@ void SPI_Receive (uint8_t *data, int size, SPI_TypeDef * SPIx);
 #define CAN3_INT0_GPIO_Port GPIOE
 #define CAN3_INT1_Pin GPIO_PIN_6
 #define CAN3_INT1_GPIO_Port GPIOE
-
 #define PH0_OSC_IN_Pin GPIO_PIN_0
 #define PH0_OSC_IN_GPIO_Port GPIOH
 #define PH1_OSC_OUT_Pin GPIO_PIN_1
 #define PH1_OSC_OUT_GPIO_Port GPIOH
-
 #define OTG_FS_PowerSwitchOn_Pin GPIO_PIN_0
 #define OTG_FS_PowerSwitchOn_GPIO_Port GPIOC
-
 #define CAN4_CS_Pin GPIO_PIN_7
 #define CAN4_CS_GPIO_Port GPIOE
 #define CAN5_CS_Pin GPIO_PIN_8
 #define CAN5_CS_GPIO_Port GPIOE
 #define CAN6_CS_Pin GPIO_PIN_9
 #define CAN6_CS_GPIO_Port GPIOE
-
 #define SS1_Pin GPIO_PIN_10
 #define SS1_GPIO_Port GPIOE
 #define SS2_Pin GPIO_PIN_11
 #define SS2_GPIO_Port GPIOE
-
 #define LD4_Pin GPIO_PIN_12
 #define LD4_GPIO_Port GPIOD
 #define LD3_Pin GPIO_PIN_13
@@ -98,7 +93,6 @@ void SPI_Receive (uint8_t *data, int size, SPI_TypeDef * SPIx);
 #define LD5_GPIO_Port GPIOD
 #define LD6_Pin GPIO_PIN_15
 #define LD6_GPIO_Port GPIOD
-
 #define SWDIO_Pin GPIO_PIN_13
 #define SWDIO_GPIO_Port GPIOA
 #define SWCLK_Pin GPIO_PIN_14

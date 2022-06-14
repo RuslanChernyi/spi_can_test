@@ -128,6 +128,23 @@ void canfd_getStatus(mcp_status * candf_status, spiCAN * spican)
 	FIFOUA_addres = cREGADDR_CiFIFOUA + (CiFIFO_OFFSET * CAN_FIFO_CH1);
 	spican_read32bitReg_withDMA(FIFOUA_addres, candf_status->FIFO2_NextAddress.byte, spican);
 
+	spican_read32bitReg_withDMA(cREGADDR_CiFLTCON, candf_status->Filter0.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiFLTCON+4, candf_status->Filter1.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiFLTCON+8, candf_status->Filter2.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiFLTCON+12, candf_status->Filter3.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiFLTCON+16, candf_status->Filter4.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiFLTCON+20, candf_status->Filter5.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiFLTCON+24, candf_status->Filter6.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiFLTCON+28, candf_status->Filter7.byte, spican);
+
+	spican_read32bitReg_withDMA(cREGADDR_CiFLTOBJ + CiFILTER_OFFSET * 0, candf_status->FltObj0.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiFLTOBJ + CiFILTER_OFFSET * 1, candf_status->FltObj1.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiFLTOBJ + CiFILTER_OFFSET * 2, candf_status->FltObj2.byte, spican);
+
+	spican_read32bitReg_withDMA(cREGADDR_CiMASK + CiFILTER_OFFSET * 0, candf_status->Mask0.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiMASK + CiFILTER_OFFSET * 1, candf_status->Mask1.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiMASK + CiFILTER_OFFSET * 2, candf_status->Mask1.byte, spican);
+
 	spican_read32bitReg_withDMA(cREGADDR_OSC, candf_status->Oscillator_configuration_and_status.byte, spican);
 	spican_read32bitReg_withDMA(cREGADDR_IOCON, candf_status->GPIO_Status.byte, spican);
 	HAL_GPIO_TogglePin(LD6_GPIO_Port, LD6_Pin);
@@ -142,7 +159,27 @@ uint32_t canfd_checkIfFIFOisNotFull(uint32_t FIFOx, spiCAN * spican)
 	spican_read32bitReg_withDMA(FIFOstatus_address, FIFO_status.byte, spican);
 	while(FIFO_status.txBF.TxNotFullIF != 1 && timeout >= 0)	// Wait till TFNRFNIF in CiFIFOSTA1 is set (means Transmit FIFO is not full)
 	{
-		canfd_resetFIFO(FIFOx, &canfd1_fifos.FIFO2, spican);
+		canfd_resetFIFO(FIFOx, &canfd1_fifos.FIFO2CON, spican);
+		spican_read32bitReg_withDMA(FIFOstatus_address, FIFO_status.byte, spican);
+		timeout--;
+	}
+	if(timeout <= 0)
+	{
+		return HAL_TIMEOUT;
+	}
+	return HAL_OK;
+}
+
+// Check if FIFO is not empty
+uint32_t canfd_checkIfFIFOisNotEmpty(uint32_t FIFOx, spiCAN * spican)
+{
+	REG_CiFIFOSTA FIFO_status = {0};
+	int32_t timeout = 10;
+	uint32_t FIFOstatus_address = cREGADDR_CiFIFOSTA + (CiFIFO_OFFSET * FIFOx);
+	spican_read32bitReg_withDMA(FIFOstatus_address, FIFO_status.byte, spican);
+	while(FIFO_status.rxBF.RxNotEmptyIF != 1 && timeout >= 0)	// Wait till TFNRFNIF in CiFIFOSTA1 is set (means Receive FIFO is not empty)
+	{
+		canfd_resetFIFO(FIFOx, &canfd1_fifos.FIFO1CON, spican);
 		spican_read32bitReg_withDMA(FIFOstatus_address, FIFO_status.byte, spican);
 		timeout--;
 	}
@@ -167,21 +204,12 @@ REG_CiTXREQ canfd_requestTransmission(uint32_t FIFOx, spiCAN * spican)
 // Increment FIFO
 void canfd_increment_FIFO(uint32_t FIFOx, REG_CiFIFOCON * fifocon, spiCAN * spican)
 {
-	fifocon->txBF.TxNotFullIE = 0;
-	fifocon->txBF.TxHalfFullIE = 0;
-	fifocon->txBF.TxEmptyIE = 0;
-	fifocon->txBF.TxAttemptIE = 0;
-	fifocon->txBF.RTREnable = 0;
-	fifocon->txBF.TxRequest = 0;
-	fifocon->txBF.TxPriority = 0;
-	fifocon->txBF.TxAttempts = 0;
-	fifocon->txBF.UINC = 1;
-	fifocon->txBF.TxEnable = 1;
-	fifocon->txBF.FRESET = 0;
-	fifocon->txBF.FifoSize = 0x3;
-	fifocon->txBF.PayLoadSize = 0;
-
 	uint32_t FIFOctrl_address = cREGADDR_CiFIFOCON + (CiFIFO_OFFSET * FIFOx);
+
+	spican_read32bitReg_withDMA(FIFOctrl_address, fifocon->byte, spican);
+
+	fifocon->txBF.UINC = 1;
+
 	spican_write32bitReg(FIFOctrl_address, fifocon->byte, spican);
 	spican_read32bitReg_withDMA(FIFOctrl_address, fifocon->byte, spican);
 }
@@ -229,10 +257,10 @@ void canfd_resetFIFO(uint32_t FIFOx, REG_CiFIFOCON * fifocon, spiCAN * spican)
 }
 
 // Can Transmit
-uint32_t canfd_transmit(spiCAN * spican)
+uint32_t canfd_transmit(uint32_t FIFOx, spiCAN * spican)
 {
 	canMsg msgID = {0};
-
+	uint8_t rx_buff[16] = {0};
 	msgID.id.EID = 0;
 	msgID.id.SID = 0x1;
 	msgID.id.SID11 = 0;
@@ -243,44 +271,53 @@ uint32_t canfd_transmit(spiCAN * spican)
 
 	// message_ctrl.ESI and message_ctrl.FDF bits are used only in CAN-FD (Ignored in CAN2.0)
 
-	//// Initialize message array
+	//////////////////////////////////////////////////////// Initialize message array
 	for(int i = 0; i < sizeof(msgID.message); i++)
 	{
 		msgID.message[i] = 0xEF;
 	}
-	////
+	////////////////////////////////////////////////////////
 
 	// Check if FIFO is not full
-	if(canfd_checkIfFIFOisNotFull(CAN_FIFO_CH2, spican) != HAL_OK)
+	if(canfd_checkIfFIFOisNotFull(FIFOx, spican) != HAL_OK)
 	{
 		HAL_GPIO_WritePin(LD5_GPIO_Port, LD5_Pin, 1);
 		return HAL_TIMEOUT;
 	}
 
 	// Check next transmit message address
-	uint32_t InRAMmsg_address = canfd_getNextFIFOmsgAddress(CAN_FIFO_CH2, spican);
+	uint32_t InRAMmsg_address = canfd_getNextFIFOmsgAddress(FIFOx, spican);
 	// Send message
 	spican_write8bitArray(InRAMmsg_address, msgID.byte, sizeof(msgID.byte), spican);
-
+	spican_readBytes_withDMA(InRAMmsg_address, rx_buff, sizeof(rx_buff), spican);
 	// Increment FIFO
-	canfd_increment_FIFO(CAN_FIFO_CH2, &canfd1_fifos.FIFO2, spican);
-
+	canfd_increment_FIFO(FIFOx, &canfd1_fifos.FIFO2CON, spican);
+	spican_readBytes_withDMA(InRAMmsg_address, rx_buff, sizeof(rx_buff), spican);
 	// Request sending the message
-	canfd_requestTransmission(CAN_FIFO_CH2, spican);
+	canfd_requestTransmission(FIFOx, spican);
 
-
-	// Check message in RAM
-	canMsg msgInRAM[16] = {0};
-	spican_readBytes_withDMA(InRAMmsg_address, msgInRAM->byte, sizeof(msgInRAM->byte), spican);
-	// Check request register
-	uint8_t check_req[4] = {0};
-	spican_read32bitReg_withDMA(cREGADDR_CiTXREQ, check_req, spican);
 	// Check FIFO's status register
-	REG_CiFIFOSTA FIFO_status = canfd_getFIFOstatus(CAN_FIFO_CH2, spican);
 	HAL_GPIO_TogglePin(LD4_GPIO_Port, LD4_Pin);
 	return HAL_OK;
 }
+// Can Receive
+CAN_RX_MSGOBJ canfd_receive(uint32_t FIFOx, spiCAN * spican)
+{
+	CAN_RX_MSGOBJ RxMsg = {0};
 
+	// Check if FIFO is not empty
+	if(canfd_checkIfFIFOisNotEmpty(FIFOx, spican) != HAL_OK)
+	{
+		HAL_GPIO_WritePin(LD5_GPIO_Port, LD5_Pin, 1);
+	}
+	// Check next receive message address
+	uint32_t InRAMmsg_address = canfd_getNextFIFOmsgAddress(FIFOx, spican);
+	spican_readBytes_withDMA(InRAMmsg_address, RxMsg.byte, sizeof(RxMsg.byte), spican);
+	// Increment FIFO
+
+	canfd_increment_FIFO(FIFOx, &canfd1_fifos.FIFO1CON, spican);
+	return RxMsg;
+}
 
 // Write
 void spican_writeByte(uint32_t address, uint8_t message, spiCAN * spican)
@@ -379,6 +416,7 @@ uint8_t spican_readByte_withDMA(uint32_t address, spiCAN * spican)
 
 	return buffer[2];
 }
+
 void spican_read32bitReg_withDMA(uint32_t address, uint8_t * reg_buffer, spiCAN * spican)
 {
 

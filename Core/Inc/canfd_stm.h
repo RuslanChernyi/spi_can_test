@@ -294,14 +294,36 @@ typedef struct mcp_status_t
 	REG_CiFIFOUA FIFO1_NextAddress;
 	REG_CiFIFOUA FIFO2_NextAddress;
 
+	REG_CiFLTCON Filter0;
+	REG_CiFLTCON Filter1;
+	REG_CiFLTCON Filter2;
+	REG_CiFLTCON Filter3;
+	REG_CiFLTCON Filter4;
+	REG_CiFLTCON Filter5;
+	REG_CiFLTCON Filter6;
+	REG_CiFLTCON Filter7;
+
+	REG_CiFLTOBJ FltObj0;
+	REG_CiFLTOBJ FltObj1;
+	REG_CiFLTOBJ FltObj2;
+
+	REG_CiMASK Mask0;
+	REG_CiMASK Mask1;
+	REG_CiMASK Mask2;
+
 	REG_OSC	Oscillator_configuration_and_status;
 	REG_IOCON GPIO_Status;
+
+	uint8_t can_RAM[];
+
 }mcp_status;
 
 typedef struct UsedFIFOs_t
 {
-	REG_CiFIFOCON FIFO1;
-	REG_CiFIFOCON FIFO2;
+	REG_CiFIFOCON FIFO1CON;
+	REG_CiFIFOSTA FIFO1STA;
+	REG_CiFIFOCON FIFO2CON;
+	REG_CiFIFOSTA FIFO2STA;
 }UsedFIFOs;
 
 typedef struct spiCAN_t
@@ -336,8 +358,11 @@ typedef union canMsg_t
 }canMsg;
 
 
-uint32_t canfd_transmit(spiCAN * spican);
+uint32_t canfd_transmit(uint32_t FIFOx, spiCAN * spican);
+CAN_RX_MSGOBJ canfd_receive(uint32_t FIFOx, spiCAN * spican);
+
 uint32_t canfd_checkIfFIFOisNotFull(uint32_t FIFOx, spiCAN * spican);
+uint32_t canfd_checkIfFIFOisNotEmpty(uint32_t FIFOx, spiCAN * spican);
 REG_CiTXREQ canfd_requestTransmission(uint32_t FIFOx, spiCAN * spican);
 void canfd_increment_FIFO(uint32_t FIFOx, REG_CiFIFOCON * fifocon, spiCAN * spican);
 REG_CiFIFOSTA canfd_getFIFOstatus(uint32_t FIFOx, spiCAN * spican);
