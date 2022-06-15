@@ -136,10 +136,10 @@ int main(void)
 	  static uint8_t rx_buf[300] = {0};
 //	  encoder_counter = __HAL_TIM_GET_COUNTER(&htim4);//htim4.Instance->CNT;
 //	  eg = 32767 - ((encoder_counter - 1) & 0xFFFF) / 2;
-	  if(counter_rx == 100000)
+	  if(counter_rx == 1000)
 	  {
 		  canfd_transmit(CAN_FIFO_CH1, &spican1);
-		  //received_msg = canfd_receive(CAN_FIFO_CH2, &spican1);
+		  received_msg = canfd_receive(CAN_FIFO_CH2, &spican1);
 		  canfd_getStatus(&canfd1_status, &spican1);
 		  counter_rx = 0;
 	  }

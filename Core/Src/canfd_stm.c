@@ -268,7 +268,9 @@ uint32_t canfd_transmit(uint32_t FIFOx, spiCAN * spican)
 	msgID.ctrl.DLC = 0x8;
 	msgID.ctrl.RTR = 0;
 	msgID.ctrl.BRS = 0;	// If Bit rate switch is used, data bytes are transmited with DBR otherwise the whole message is transmited with NBR
-
+	msgID.ctrl.FDF = 0;
+	msgID.ctrl.ESI = 0;
+	msgID.ctrl.SEQ = 0;
 	// message_ctrl.ESI and message_ctrl.FDF bits are used only in CAN-FD (Ignored in CAN2.0)
 
 	//////////////////////////////////////////////////////// Initialize message array
@@ -289,7 +291,7 @@ uint32_t canfd_transmit(uint32_t FIFOx, spiCAN * spican)
 	uint32_t InRAMmsg_address = canfd_getNextFIFOmsgAddress(FIFOx, spican);
 	// Send message
 	spican_write8bitArray(InRAMmsg_address, msgID.byte, sizeof(msgID.byte), spican);
-//	spican_readBytes_withDMA(InRAMmsg_address, rx_buff, sizeof(rx_buff), spican);
+	spican_readBytes_withDMA(InRAMmsg_address, rx_buff, sizeof(rx_buff), spican);
 	// Increment FIFO
 	canfd_increment_FIFO(FIFOx, &canfd1_fifos.FIFO2CON, spican);
 //	spican_readBytes_withDMA(InRAMmsg_address, rx_buff, sizeof(rx_buff), spican);
@@ -508,7 +510,7 @@ void spican_readBytes_withDMA(uint32_t address, uint8_t * rx_buffer, uint32_t si
 	// Set amount of data to read by DMA
 	DMA2_Stream0->NDTR = buffer_size;
 	// Select memory destination
-	DMA2_Stream0->M0AR = (uint32_t)rx_buffer;
+	DMA2_Stream0->M0AR = (uint32_t)buffer;
 	// Start DMA
 	DMA2_Stream0->CR |= (1U<<0);
 

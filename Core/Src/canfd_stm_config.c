@@ -127,7 +127,7 @@ void canfd_configure_CiCON(spiCAN * spican)
 	cicon.bF.WakeUpFilterEnable = 0;
 	cicon.bF.WakeUpFilterTime = 0;
 	cicon.bF.BitRateSwitchDisable = 1;
-	cicon.bF.RestrictReTxAttempts = 0;
+	cicon.bF.RestrictReTxAttempts = 1;
 	cicon.bF.EsiInGatewayMode = 0;
 	cicon.bF.SystemErrorToListenOnly = 1;
 	cicon.bF.StoreInTEF = 0;
@@ -246,7 +246,7 @@ void canfd_configure_asTransmitFIFO(uint32_t FIFOx, REG_CiFIFOCON * fifocon, spi
 	fifocon->txBF.RTREnable = 0;
 	fifocon->txBF.TxRequest = 0;
 	fifocon->txBF.TxPriority = 0;
-	fifocon->txBF.TxAttempts = 0;
+	fifocon->txBF.TxAttempts = 1;
 	fifocon->txBF.UINC = 0;
 	fifocon->txBF.TxEnable = 1;
 	fifocon->txBF.FRESET = 0;
