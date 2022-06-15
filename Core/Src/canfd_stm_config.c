@@ -228,7 +228,7 @@ void canfd_configure_asReceiveFIFO(uint32_t FIFOx, REG_CiFIFOCON * fifocon, spiC
 	fifocon->rxBF.RxTimeStampEnable = 0;
 	fifocon->rxBF.UINC = 0;
 	fifocon->rxBF.TxEnable = 0;
-	fifocon->rxBF.FRESET = 1;
+	fifocon->rxBF.FRESET = 0;
 	fifocon->rxBF.FifoSize = 0x3;
 	fifocon->rxBF.PayLoadSize = 0;
 
@@ -249,7 +249,7 @@ void canfd_configure_asTransmitFIFO(uint32_t FIFOx, REG_CiFIFOCON * fifocon, spi
 	fifocon->txBF.TxAttempts = 0;
 	fifocon->txBF.UINC = 0;
 	fifocon->txBF.TxEnable = 1;
-	fifocon->txBF.FRESET = 1;
+	fifocon->txBF.FRESET = 0;
 	fifocon->txBF.FifoSize = 0x3;
 	fifocon->txBF.PayLoadSize = 0;
 

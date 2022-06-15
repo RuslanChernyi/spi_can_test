@@ -194,7 +194,7 @@ uint32_t canfd_checkIfFIFOisNotEmpty(uint32_t FIFOx, spiCAN * spican)
 REG_CiTXREQ canfd_requestTransmission(uint32_t FIFOx, spiCAN * spican)
 {
 	REG_CiTXREQ TXrequest_reg = {0};
-	TXrequest_reg.word |= 0x1U<<CAN_FIFO_CH2;
+	TXrequest_reg.word |= 0x1U<<FIFOx;
 	spican_write32bitReg(cREGADDR_CiTXREQ, TXrequest_reg.byte, spican);
 	// Check request register
 	spican_read32bitReg_withDMA(cREGADDR_CiTXREQ, TXrequest_reg.byte, spican);
@@ -289,10 +289,10 @@ uint32_t canfd_transmit(uint32_t FIFOx, spiCAN * spican)
 	uint32_t InRAMmsg_address = canfd_getNextFIFOmsgAddress(FIFOx, spican);
 	// Send message
 	spican_write8bitArray(InRAMmsg_address, msgID.byte, sizeof(msgID.byte), spican);
-	spican_readBytes_withDMA(InRAMmsg_address, rx_buff, sizeof(rx_buff), spican);
+//	spican_readBytes_withDMA(InRAMmsg_address, rx_buff, sizeof(rx_buff), spican);
 	// Increment FIFO
 	canfd_increment_FIFO(FIFOx, &canfd1_fifos.FIFO2CON, spican);
-	spican_readBytes_withDMA(InRAMmsg_address, rx_buff, sizeof(rx_buff), spican);
+//	spican_readBytes_withDMA(InRAMmsg_address, rx_buff, sizeof(rx_buff), spican);
 	// Request sending the message
 	canfd_requestTransmission(FIFOx, spican);
 
