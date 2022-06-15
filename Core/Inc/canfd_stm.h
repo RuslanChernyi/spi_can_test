@@ -306,15 +306,21 @@ typedef struct mcp_status_t
 	REG_CiFLTOBJ FltObj0;
 	REG_CiFLTOBJ FltObj1;
 	REG_CiFLTOBJ FltObj2;
+	REG_CiFLTOBJ FltObj3;
+	REG_CiFLTOBJ FltObj4;
+	REG_CiFLTOBJ FltObj5;
 
 	REG_CiMASK Mask0;
 	REG_CiMASK Mask1;
 	REG_CiMASK Mask2;
+	REG_CiMASK Mask3;
+	REG_CiMASK Mask4;
+	REG_CiMASK Mask5;
 
 	REG_OSC	Oscillator_configuration_and_status;
 	REG_IOCON GPIO_Status;
 
-	uint8_t can_RAM[];
+	uint8_t can_RAM[320];
 
 }mcp_status;
 
@@ -358,8 +364,10 @@ typedef union canMsg_t
 }canMsg;
 
 
-uint32_t canfd_transmit(uint32_t FIFOx, spiCAN * spican);
+uint32_t canfd_transmit(uint8_t * message, uint32_t FIFOx, spiCAN * spican);
 CAN_RX_MSGOBJ canfd_receive(uint32_t FIFOx, spiCAN * spican);
+
+void canfd_RAMInit(spiCAN * spican);
 
 uint32_t canfd_checkIfFIFOisNotFull(uint32_t FIFOx, spiCAN * spican);
 uint32_t canfd_checkIfFIFOisNotEmpty(uint32_t FIFOx, spiCAN * spican);

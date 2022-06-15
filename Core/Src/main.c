@@ -126,20 +126,32 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 
   HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 0);
+  HAL_GPIO_WritePin(LD5_GPIO_Port, LD5_Pin, 0);
   canfd_getStatus(&canfd1_status, &spican1);
   canfd_configure(&spican1);
   canfd_getStatus(&canfd1_status, &spican1);
   while (1)
   {
 	  static uint32_t counter_rx = 0;
-	  static uint32_t h = 1;
-	  static uint8_t rx_buf[300] = {0};
 //	  encoder_counter = __HAL_TIM_GET_COUNTER(&htim4);//htim4.Instance->CNT;
 //	  eg = 32767 - ((encoder_counter - 1) & 0xFFFF) / 2;
 	  if(counter_rx == 1000)
 	  {
-		  canfd_transmit(CAN_FIFO_CH1, &spican1);
-		  received_msg = canfd_receive(CAN_FIFO_CH2, &spican1);
+		  static uint8_t transmit_message[8] = {0};
+		  static uint8_t index = 0;
+		  if(index >= sizeof(transmit_message))
+		  {
+			  index = 0;
+		  }
+		  transmit_message[index++]++;
+
+		  canfd_transmit(transmit_message, CAN_FIFO_CH1, &spican1);
+		  if(canfd_checkIfFIFOisNotEmpty(CAN_FIFO_CH2, &spican1) == HAL_OK)
+		  {
+			  canfd_getStatus(&canfd1_status, &spican1);
+			  received_msg = canfd_receive(CAN_FIFO_CH2, &spican1);
+		  }
+
 		  canfd_getStatus(&canfd1_status, &spican1);
 		  counter_rx = 0;
 	  }

@@ -421,10 +421,11 @@ typedef union _CAN_RX_MSGOBJ {
     struct {
         CAN_MSGOBJ_ID id;
         CAN_RX_MSGOBJ_CTRL ctrl;
-        CAN_MSG_TIMESTAMP timeStamp;
+        //CAN_MSG_TIMESTAMP timeStamp;
+        uint8_t message[8];
     } bF;
-    uint32_t word[3];
-    uint8_t byte[12];
+    uint32_t word[4];
+    uint8_t byte[16];
 } CAN_RX_MSGOBJ;
 
 //! CAN TEF Message Object

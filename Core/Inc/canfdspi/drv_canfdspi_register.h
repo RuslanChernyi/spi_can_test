@@ -643,23 +643,34 @@ typedef union _REG_CiFIFOUA {
 typedef union _REG_CiFLTCON_BYTE {
 
     struct {
-        uint32_t BufferPointer : 5;
-        uint32_t unimplemented1 : 2;
-        uint32_t Enable : 1;
+        uint8_t BufferPointer : 5;
+        uint8_t unimplemented1 : 2;
+        uint8_t Enable : 1;
     } bF;
     uint8_t byte;
 } REG_CiFLTCON_BYTE;
 
-typedef struct REG32_CiFLTCON_t
-{
-	REG_CiFLTCON_BYTE CiFLTCON_BYTE0;
-	REG_CiFLTCON_BYTE CiFLTCON_BYTE1;
-	REG_CiFLTCON_BYTE CiFLTCON_BYTE2;
-	REG_CiFLTCON_BYTE CiFLTCON_BYTE3;
-}REG32_CiFLTCON;
+//typedef struct REG32_CiFLTCON_t
+//{
+//
+//}REG32_CiFLTCON;
 typedef union REG_CiFLTCON_t
 {
-	REG32_CiFLTCON BF;
+	struct
+	{
+		uint8_t F0BP : 5;
+		uint8_t unimplemented1 : 2;
+		uint8_t FLTEN0 : 1;
+		uint8_t F1BP : 5;
+		uint8_t unimplemented2 : 2;
+		uint8_t FLTEN1 : 1;
+		uint8_t F2BP : 5;
+		uint8_t unimplemented3 : 2;
+		uint8_t FLTEN2 : 1;
+		uint8_t F3BP : 5;
+		uint8_t unimplemented4 : 2;
+		uint8_t FLTEN3 : 1;
+	}bF;
 	uint32_t word;
 	uint8_t byte[4];
 }REG_CiFLTCON;

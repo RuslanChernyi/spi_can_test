@@ -100,6 +100,14 @@ void spiCAN1_Init()
 //	spican4.INT1_Port = CAN6_INT1_GPIO_Port;
 //}
 
+// Initialize RAM
+void canfd_RAMInit(spiCAN * spican)
+{
+	uint8_t canfd_RAM[cRAM_SIZE] = {0};
+
+	spican_write8bitArray(cRAMADDR_START, canfd_RAM, sizeof(canfd_RAM), spican);
+}
+
 // Get status values from mcp
 void canfd_getStatus(mcp_status * candf_status, spiCAN * spican)
 {
@@ -140,13 +148,22 @@ void canfd_getStatus(mcp_status * candf_status, spiCAN * spican)
 	spican_read32bitReg_withDMA(cREGADDR_CiFLTOBJ + CiFILTER_OFFSET * 0, candf_status->FltObj0.byte, spican);
 	spican_read32bitReg_withDMA(cREGADDR_CiFLTOBJ + CiFILTER_OFFSET * 1, candf_status->FltObj1.byte, spican);
 	spican_read32bitReg_withDMA(cREGADDR_CiFLTOBJ + CiFILTER_OFFSET * 2, candf_status->FltObj2.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiFLTOBJ + CiFILTER_OFFSET * 3, candf_status->FltObj3.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiFLTOBJ + CiFILTER_OFFSET * 4, candf_status->FltObj4.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiFLTOBJ + CiFILTER_OFFSET * 5, candf_status->FltObj5.byte, spican);
 
 	spican_read32bitReg_withDMA(cREGADDR_CiMASK + CiFILTER_OFFSET * 0, candf_status->Mask0.byte, spican);
 	spican_read32bitReg_withDMA(cREGADDR_CiMASK + CiFILTER_OFFSET * 1, candf_status->Mask1.byte, spican);
-	spican_read32bitReg_withDMA(cREGADDR_CiMASK + CiFILTER_OFFSET * 2, candf_status->Mask1.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiMASK + CiFILTER_OFFSET * 2, candf_status->Mask2.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiMASK + CiFILTER_OFFSET * 3, candf_status->Mask3.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiMASK + CiFILTER_OFFSET * 4, candf_status->Mask4.byte, spican);
+	spican_read32bitReg_withDMA(cREGADDR_CiMASK + CiFILTER_OFFSET * 5, candf_status->Mask5.byte, spican);
 
 	spican_read32bitReg_withDMA(cREGADDR_OSC, candf_status->Oscillator_configuration_and_status.byte, spican);
 	spican_read32bitReg_withDMA(cREGADDR_IOCON, candf_status->GPIO_Status.byte, spican);
+
+	spican_readBytes_withDMA(cRAMADDR_START, candf_status->can_RAM, sizeof(candf_status->can_RAM), spican);
+
 	HAL_GPIO_TogglePin(LD6_GPIO_Port, LD6_Pin);
 }
 
@@ -209,7 +226,7 @@ void canfd_increment_FIFO(uint32_t FIFOx, REG_CiFIFOCON * fifocon, spiCAN * spic
 	spican_read32bitReg_withDMA(FIFOctrl_address, fifocon->byte, spican);
 
 	fifocon->txBF.UINC = 1;
-
+	fifocon->txBF.TxRequest = 1;
 	spican_write32bitReg(FIFOctrl_address, fifocon->byte, spican);
 	spican_read32bitReg_withDMA(FIFOctrl_address, fifocon->byte, spican);
 }
@@ -257,7 +274,7 @@ void canfd_resetFIFO(uint32_t FIFOx, REG_CiFIFOCON * fifocon, spiCAN * spican)
 }
 
 // Can Transmit
-uint32_t canfd_transmit(uint32_t FIFOx, spiCAN * spican)
+uint32_t canfd_transmit(uint8_t * message, uint32_t FIFOx, spiCAN * spican)
 {
 	canMsg msgID = {0};
 	uint8_t rx_buff[16] = {0};
@@ -276,7 +293,7 @@ uint32_t canfd_transmit(uint32_t FIFOx, spiCAN * spican)
 	//////////////////////////////////////////////////////// Initialize message array
 	for(int i = 0; i < sizeof(msgID.message); i++)
 	{
-		msgID.message[i] = 0xEF;
+		msgID.message[i] = message[i];
 	}
 	////////////////////////////////////////////////////////
 
@@ -291,12 +308,10 @@ uint32_t canfd_transmit(uint32_t FIFOx, spiCAN * spican)
 	uint32_t InRAMmsg_address = canfd_getNextFIFOmsgAddress(FIFOx, spican);
 	// Send message
 	spican_write8bitArray(InRAMmsg_address, msgID.byte, sizeof(msgID.byte), spican);
-	spican_readBytes_withDMA(InRAMmsg_address, rx_buff, sizeof(rx_buff), spican);
-	// Increment FIFO
+	// Increment FIFO and Request sending the message
 	canfd_increment_FIFO(FIFOx, &canfd1_fifos.FIFO2CON, spican);
-//	spican_readBytes_withDMA(InRAMmsg_address, rx_buff, sizeof(rx_buff), spican);
 	// Request sending the message
-	canfd_requestTransmission(FIFOx, spican);
+//	canfd_requestTransmission(FIFOx, spican);
 
 	// Check FIFO's status register
 	HAL_GPIO_TogglePin(LD4_GPIO_Port, LD4_Pin);
@@ -308,16 +323,17 @@ CAN_RX_MSGOBJ canfd_receive(uint32_t FIFOx, spiCAN * spican)
 	CAN_RX_MSGOBJ RxMsg = {0};
 
 	// Check if FIFO is not empty
-	if(canfd_checkIfFIFOisNotEmpty(FIFOx, spican) != HAL_OK)
-	{
-		HAL_GPIO_WritePin(LD5_GPIO_Port, LD5_Pin, 1);
-	}
+//	if(canfd_checkIfFIFOisNotEmpty(FIFOx, spican) != HAL_OK)
+//	{
+////
+//	}
 	// Check next receive message address
 	uint32_t InRAMmsg_address = canfd_getNextFIFOmsgAddress(FIFOx, spican);
 	spican_readBytes_withDMA(InRAMmsg_address, RxMsg.byte, sizeof(RxMsg.byte), spican);
 	// Increment FIFO
 
 	canfd_increment_FIFO(FIFOx, &canfd1_fifos.FIFO1CON, spican);
+	HAL_GPIO_TogglePin(LD5_GPIO_Port, LD5_Pin);
 	return RxMsg;
 }
 
