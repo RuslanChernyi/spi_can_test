@@ -143,7 +143,7 @@ int main(void)
 		  {
 			  index = 0;
 		  }
-		  transmit_message[index++]++;
+		  transmit_message[index++] = 0xEF;
 
 		  canfd_transmit(transmit_message, CAN_FIFO_CH1, &spican1);
 		  if(canfd_checkIfFIFOisNotEmpty(CAN_FIFO_CH2, &spican1) == HAL_OK)

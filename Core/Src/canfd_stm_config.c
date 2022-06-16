@@ -112,7 +112,7 @@ void canfd_configure(spiCAN * spican)
 	canfd_configure_FilterConX(0, CAN_FIFO_CH2, CAN_FIFO_CH3, CAN_FIFO_CH4, CAN_FIFO_CH5, spican);
 	canfd_RAMInit(spican);
 	// Go to External loopback mode
-	spican_writeByte(cREGADDR_CiCON+3, CAN_EXTERNAL_LOOPBACK_MODE, spican);	// CAN_EXTERNAL_LOOPBACK_MODE | CAN_CLASSIC_MODE
+	spican_writeByte(cREGADDR_CiCON+3, CAN_CLASSIC_MODE, spican);	// CAN_EXTERNAL_LOOPBACK_MODE | CAN_CLASSIC_MODE
 }
 
 void canfd_configure_OSC(spiCAN * spican)
